@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
 import { Link, useParams } from "react-router-dom";
 import {
-  FloatingAnimation,
-  ScrollAnimation,
-  ScrollAnimationGroup,
+  Floating,
+  ScrollReveal,
+  ScrollRevealGroup,
 } from "../components/ScrollAnimation";
 import { fadeInLeft, fadeInRight, fadeInUp } from "../components/animations";
 
@@ -53,7 +53,7 @@ const TaskDetails = () => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Navigation */}
-        <ScrollAnimation variant={fadeInLeft} delay={0.2}>
+        <ScrollReveal variant={fadeInLeft} delay={0.2}>
           <Link
             to="/explore"
             className="text-blue-600 hover:text-blue-700 flex items-center"
@@ -73,10 +73,10 @@ const TaskDetails = () => {
             </svg>
             Back to Dashboard
           </Link>
-        </ScrollAnimation>
+        </ScrollReveal>
 
         {/* Task Header */}
-        <ScrollAnimation variant={fadeInUp} delay={0.3} className="mt-6">
+        <ScrollReveal variant={fadeInUp} delay={0.3} className="mt-6">
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex justify-between items-start">
               <div>
@@ -85,18 +85,18 @@ const TaskDetails = () => {
                 </h1>
                 <p className="text-gray-600">Posted by: {task.company}</p>
               </div>
-              <FloatingAnimation>
+              <Floating>
                 <div className="text-2xl font-bold text-green-600">
                   ${task.payout}
                 </div>
-              </FloatingAnimation>
+              </Floating>
             </div>
           </div>
-        </ScrollAnimation>
+        </ScrollReveal>
 
         {/* Task Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <ScrollAnimation variant={fadeInLeft} delay={0.4}>
+          <ScrollReveal variant={fadeInLeft} delay={0.4}>
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h2 className="text-lg font-semibold mb-4">Task Information</h2>
               <div className="space-y-3">
@@ -122,9 +122,9 @@ const TaskDetails = () => {
                 </div>
               </div>
             </div>
-          </ScrollAnimation>
+          </ScrollReveal>
 
-          <ScrollAnimation variant={fadeInRight} delay={0.4}>
+          <ScrollReveal variant={fadeInRight} delay={0.4}>
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h2 className="text-lg font-semibold mb-4">Required Skills</h2>
               <div className="flex flex-wrap gap-2">
@@ -138,14 +138,14 @@ const TaskDetails = () => {
                 ))}
               </div>
             </div>
-          </ScrollAnimation>
+          </ScrollReveal>
         </div>
 
         {/* Requirements */}
-        <ScrollAnimation variant={fadeInUp} delay={0.5} className="mt-6">
+        <ScrollReveal variant={fadeInUp} delay={0.5} className="mt-6">
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-lg font-semibold mb-4">Requirements</h2>
-            <ScrollAnimationGroup staggerDelay={0.1}>
+            <ScrollRevealGroup staggerDelay={0.1}>
               {task.requirements.map((req, index) => (
                 <div key={index} className="flex items-start py-2">
                   <svg
@@ -164,15 +164,15 @@ const TaskDetails = () => {
                   <span className="text-gray-700">{req}</span>
                 </div>
               ))}
-            </ScrollAnimationGroup>
+            </ScrollRevealGroup>
           </div>
-        </ScrollAnimation>
+        </ScrollReveal>
 
         {/* Deliverables */}
-        <ScrollAnimation variant={fadeInUp} delay={0.6} className="mt-6">
+        <ScrollReveal variant={fadeInUp} delay={0.6} className="mt-6">
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-lg font-semibold mb-4">Deliverables</h2>
-            <ScrollAnimationGroup staggerDelay={0.1}>
+            <ScrollRevealGroup staggerDelay={0.1}>
               {task.deliverables.map((del, index) => (
                 <div key={index} className="flex items-start py-2">
                   <svg
@@ -191,12 +191,12 @@ const TaskDetails = () => {
                   <span className="text-gray-700">{del}</span>
                 </div>
               ))}
-            </ScrollAnimationGroup>
+            </ScrollRevealGroup>
           </div>
-        </ScrollAnimation>
+        </ScrollReveal>
 
         {/* Apply Button */}
-        <ScrollAnimation
+        <ScrollReveal
           variant={fadeInUp}
           delay={0.7}
           className="mt-8 flex justify-end"
@@ -210,7 +210,7 @@ const TaskDetails = () => {
               Apply for This Task
             </motion.button>
           </Link>
-        </ScrollAnimation>
+        </ScrollReveal>
       </div>
     </div>
   );
