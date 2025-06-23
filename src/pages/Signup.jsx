@@ -28,20 +28,20 @@ const Signup = () => {
   };
 
   return (
-    <div className="h-screen w-full flex items-center justify-center bg-[#1a1b4b] p-4">
+    <div className="h-screen w-full flex items-center justify-center bg-indigo-950 p-4">
       <AnimatedCubes count={10} />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-[1200px] h-[700px] rounded-2xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.9)] flex overflow-hidden"
+        className="w-full max-w-[1200px] h-[700px] rounded-2xl shadow-[0_0_50px_-12px_rgba(0,0,0,0.9)] flex overflow-hidden bg-gradient-to-br from-indigo-900 to-indigo-950"
       >
         {/* Left side - Signup Form */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-1/2 p-12 flex flex-col justify-center bg-[#1a1b4b] text-white relative"
+          className="w-1/2 p-12 flex flex-col justify-center bg-indigo-900/50 backdrop-blur-sm text-slate-50 relative"
         >
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -49,10 +49,10 @@ const Signup = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mb-6"
           >
-            <h2 className="text-xl font-bold text-white mb-1 mt-5">
+            <h2 className="text-xl font-bold text-slate-50 mb-1 mt-5">
               Create Account
             </h2>
-            <p className="text-gray-300 text-sm">
+            <p className="text-slate-300 text-sm">
               Join us to access unlimited data & information.
             </p>
           </motion.div>
@@ -64,13 +64,13 @@ const Signup = () => {
               transition={{ duration: 0.5, delay: 0.4 }}
               className="space-y-2"
             >
-              <label className="block text-sm text-gray-300">Full Name</label>
+              <label className="block text-sm text-slate-300">Full Name</label>
               <input
                 type="text"
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-[#2a2b5b] border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition text-white placeholder-gray-400"
+                className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
                 placeholder="Enter your full name"
                 required
               />
@@ -82,13 +82,13 @@ const Signup = () => {
               transition={{ duration: 0.5, delay: 0.5 }}
               className="space-y-2"
             >
-              <label className="block text-sm text-gray-300">Email</label>
+              <label className="block text-sm text-slate-300">Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-[#2a2b5b] border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition text-white placeholder-gray-400"
+                className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
                 placeholder="Enter your email address"
                 required
               />
@@ -100,14 +100,14 @@ const Signup = () => {
               transition={{ duration: 0.5, delay: 0.6 }}
               className="space-y-2"
             >
-              <label className="block text-sm text-gray-300">Password</label>
+              <label className="block text-sm text-slate-300">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg bg-[#2a2b5b] border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition text-white placeholder-gray-400"
+                  className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
                   placeholder="Create a password"
                   required
                 />
@@ -116,7 +116,7 @@ const Signup = () => {
                   whileTap={{ scale: 0.9 }}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"
                 >
                   {showPassword ? "👁️" : "👁️‍🗨️"}
                 </motion.button>
@@ -129,7 +129,7 @@ const Signup = () => {
               transition={{ duration: 0.5, delay: 0.7 }}
               className="space-y-2"
             >
-              <label className="block text-sm text-gray-300">
+              <label className="block text-sm text-slate-300">
                 Confirm Password
               </label>
               <div className="relative">
@@ -138,7 +138,7 @@ const Signup = () => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg bg-[#2a2b5b] border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition text-white placeholder-gray-400"
+                  className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
                   placeholder="Confirm your password"
                   required
                 />
@@ -147,7 +147,7 @@ const Signup = () => {
                   whileTap={{ scale: 0.9 }}
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"
                 >
                   {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
                 </motion.button>
@@ -161,7 +161,7 @@ const Signup = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.8 }}
               type="submit"
-              className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200 mt-6"
+              className="w-full py-3 bg-indigo-600 text-slate-50 rounded-lg hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition duration-200 mt-6"
             >
               Sign Up
             </motion.button>
@@ -174,10 +174,10 @@ const Signup = () => {
             >
               <div className="relative py-4">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-600"></div>
+                  <div className="w-full border-t border-slate-600"></div>
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="px-4 bg-[#1a1b4b] text-sm text-gray-400">
+                  <span className="px-4 bg-indigo-900 text-sm text-slate-400">
                     Or Sign up with
                   </span>
                 </div>
@@ -187,7 +187,7 @@ const Signup = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="button"
-                className="w-full py-3 border border-gray-600 rounded-lg text-gray-300 hover:bg-[#2a2b5b] transition duration-200 flex items-center justify-center space-x-2"
+                className="w-full py-3 border border-slate-600 rounded-lg text-slate-300 hover:bg-indigo-800/70 transition duration-200 flex items-center justify-center space-x-2"
                 disabled
               >
                 <span className="text-xl">G</span>
@@ -199,10 +199,10 @@ const Signup = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 1 }}
-              className="text-center text-sm text-gray-400 mt-4 mb-5"
+              className="text-center text-sm text-slate-400 mt-4 mb-5"
             >
               Already have an account?{" "}
-              <Link to="/login" className="text-purple-400 hover:underline">
+              <Link to="/login" className="text-yellow-500 hover:underline">
                 Login here
               </Link>
             </motion.p>

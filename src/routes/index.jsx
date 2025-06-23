@@ -8,13 +8,34 @@ const Signup = lazy(() => import("../pages/Signup"));
 const Exploretask = lazy(() => import("../pages/Exploretask"));
 const TaskDetails = lazy(() => import("../pages/TaskDetails"));
 const Applytask = lazy(() => import("../pages/Applytask"));
+const Profile = lazy(() => import("../pages/profile"));
+const TaskManagement = lazy(() => import("../pages/admin/TaskManagement"));
+const ColorPalette = lazy(() => import("../components/ColorPalette"));
+
+// Placeholder page for routes that don't have implementations yet
+const PlaceholderPage = () => (
+  <div className="min-h-screen bg-indigo-950 flex items-center justify-center">
+    <div className="bg-indigo-900 backdrop-blur-sm p-8 rounded-lg shadow-lg shadow-indigo-900/50 max-w-md">
+      <h1 className="text-3xl font-bold text-slate-50 mb-4">Coming Soon</h1>
+      <p className="text-slate-300 mb-6">
+        This page is under development and will be available soon.
+      </p>
+      <Link
+        to="/dashboard"
+        className="bg-indigo-600 text-slate-50 px-4 py-2 rounded-md hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 inline-block"
+      >
+        Return to Dashboard
+      </Link>
+    </div>
+  </div>
+);
 
 // Loading component
 const LoadingSpinner = () => (
-  <div className="min-h-screen flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center bg-indigo-950">
     <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-      <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
+      <p className="mt-4 text-slate-300">Loading...</p>
     </div>
   </div>
 );
@@ -23,100 +44,59 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
-        {/* Landing and Main Pages */}
+        {/* Landing and Auth Pages */}
         <Route path="/" element={<Dashboard />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+
+        {/* Handle case-insensitive routes for auth */}
+        <Route path="/Login" element={<Navigate to="/login" replace />} />
+        <Route path="/Signup" element={<Navigate to="/signup" replace />} />
+
+        {/* Main Application Routes */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route
           path="/Dashboard"
           element={<Navigate to="/dashboard" replace />}
         />
-
-        {/* Auth Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/Login" element={<Navigate to="/login" replace />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/Signup" element={<Navigate to="/signup" replace />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/Profile" element={<Navigate to="/profile" replace />} />
 
         {/* Task Related Routes */}
-        <Route path="/explore" element={<Exploretask />} />
-        <Route path="/Explore" element={<Navigate to="/explore" replace />} />
-        <Route path="/task/:id" element={<TaskDetails />} />
-        <Route path="/Task/:id" element={<Navigate to="/task/:id" replace />} />
-        <Route path="/apply/:id/success" element={<Applytask />} />
+        <Route path="/exploretask" element={<Exploretask />} />
         <Route
-          path="/Apply/:id/success"
-          element={<Navigate to="/apply/:id/success" replace />}
+          path="/Exploretask"
+          element={<Navigate to="/exploretask" replace />}
+        />
+        <Route path="/task-details/:id" element={<TaskDetails />} />
+        <Route
+          path="/Task-details/:id"
+          element={<Navigate to="/task-details/:id" replace />}
+        />
+        <Route path="/applytask" element={<Applytask />} />
+        <Route path="/applytask/:id" element={<Applytask />} />
+        <Route
+          path="/Applytask"
+          element={<Navigate to="/applytask" replace />}
         />
 
-        {/* Static Pages */}
+        {/* Admin Routes */}
+        <Route path="/admin/task-management" element={<TaskManagement />} />
         <Route
-          path="/developers"
-          element={
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center p-8">
-                <h1 className="text-2xl font-bold mb-4">
-                  Coming Soon: Developers Page
-                </h1>
-                <Link to="/" className="text-blue-600 hover:text-blue-700">
-                  Return to Home
-                </Link>
-              </div>
-            </div>
-          }
-        />
-        <Route
-          path="/business"
-          element={
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center p-8">
-                <h1 className="text-2xl font-bold mb-4">
-                  Coming Soon: Business Page
-                </h1>
-                <Link to="/" className="text-blue-600 hover:text-blue-700">
-                  Return to Home
-                </Link>
-              </div>
-            </div>
-          }
-        />
-        <Route
-          path="/help"
-          element={
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center p-8">
-                <h1 className="text-2xl font-bold mb-4">
-                  Coming Soon: Help Center
-                </h1>
-                <Link to="/" className="text-blue-600 hover:text-blue-700">
-                  Return to Home
-                </Link>
-              </div>
-            </div>
-          }
+          path="/Admin/Task-management"
+          element={<Navigate to="/admin/task-management" replace />}
         />
 
-        {/* 404 Route */}
-        <Route
-          path="*"
-          element={
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-              <div className="text-center p-8 bg-white rounded-lg shadow-lg">
-                <h1 className="text-4xl font-bold mb-4">
-                  404 - Page Not Found
-                </h1>
-                <p className="text-gray-600 mb-6">
-                  The page you're looking for doesn't exist or has been moved.
-                </p>
-                <Link
-                  to="/"
-                  className="inline-block bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Return to Home
-                </Link>
-              </div>
-            </div>
-          }
-        />
+        {/* Color Palette - Dev Tool */}
+        <Route path="/colors" element={<ColorPalette />} />
+
+        {/* Placeholder routes for incomplete pages */}
+        <Route path="/developers" element={<PlaceholderPage />} />
+        <Route path="/business" element={<PlaceholderPage />} />
+        <Route path="/help" element={<PlaceholderPage />} />
+
+        {/* Catch all - redirect to landing page */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

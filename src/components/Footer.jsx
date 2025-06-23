@@ -53,7 +53,7 @@ const Footer = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-gray-50 border-t border-gray-200"
+        className="bg-navy border-t border-border"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -64,7 +64,7 @@ const Footer = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: sectionIndex * 0.1 }}
               >
-                <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">
+                <h3 className="text-sm font-semibold text-indigo tracking-wider uppercase mb-4">
                   {section.title}
                 </h3>
                 <ul className="space-y-3">
@@ -79,7 +79,7 @@ const Footer = () => {
                     >
                       <Link
                         to={link.to}
-                        className="text-gray-600 hover:text-gray-900 transition-colors"
+                        className="text-text-secondary hover:text-indigo transition-colors"
                       >
                         {link.label}
                       </Link>
@@ -94,15 +94,15 @@ const Footer = () => {
             variants={fadeInUp}
             initial="initial"
             animate="animate"
-            className="mt-12 pt-8 border-t border-gray-200"
+            className="mt-12 pt-8 border-t border-border"
           >
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="flex items-center space-x-4">
-                <Link to="/" className="text-blue-600 font-semibold text-lg">
+                <Link to="/" className="text-indigo font-semibold text-lg">
                   Code and Cash
                 </Link>
-                <span className="text-gray-400">|</span>
-                <span className="text-gray-600">
+                <span className="text-border">|</span>
+                <span className="text-text-secondary">
                   © 2025 All rights reserved
                 </span>
               </div>
@@ -130,7 +130,7 @@ const Footer = () => {
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-indigo hover:text-indigo-hover"
                   >
                     <span className="sr-only">{item.name}</span>
                     <svg

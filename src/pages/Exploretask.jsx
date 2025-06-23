@@ -20,7 +20,7 @@ const difficulties = [
 const PriceRangeSlider = ({ value, onChange }) => {
   return (
     <div className="mb-8">
-      <h3 className="font-medium mb-4">Price Range</h3>
+      <h3 className="font-medium text-text-primary mb-4">Price Range</h3>
       <div className="space-y-4">
         <input
           type="range"
@@ -28,12 +28,12 @@ const PriceRangeSlider = ({ value, onChange }) => {
           max="5000"
           value={value}
           onChange={(e) => onChange(parseInt(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          className="w-full h-2 bg-navy rounded-lg appearance-none cursor-pointer accent-indigo"
         />
         <div className="flex justify-between items-center">
-          <span className="text-gray-600">$0</span>
-          <span className="text-blue-600 font-medium">${value}</span>
-          <span className="text-gray-600">$5000</span>
+          <span className="text-text-secondary">$0</span>
+          <span className="text-accent-yellow font-medium">${value}</span>
+          <span className="text-text-secondary">$5000</span>
         </div>
       </div>
     </div>
@@ -43,7 +43,7 @@ const PriceRangeSlider = ({ value, onChange }) => {
 const SidebarFilter = ({ title, options, selected, onChange }) => {
   return (
     <div className="mb-8">
-      <h3 className="font-medium mb-4">{title}</h3>
+      <h3 className="font-medium text-text-primary mb-4">{title}</h3>
       <div className="space-y-2">
         {options.map((option) => (
           <motion.button
@@ -52,8 +52,8 @@ const SidebarFilter = ({ title, options, selected, onChange }) => {
             whileTap={{ scale: 0.98 }}
             className={`w-full text-left px-4 py-2 rounded-md transition-colors ${
               selected === option.id
-                ? "bg-blue-100 text-blue-700"
-                : "text-gray-600 hover:bg-gray-100"
+                ? "bg-indigo bg-opacity-20 text-indigo"
+                : "text-text-secondary hover:bg-navy-light"
             }`}
             onClick={() => onChange(option.id)}
           >
@@ -73,39 +73,37 @@ const TaskCard = ({ task, index }) => {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
       whileHover={{ scale: 1.02, y: -5 }}
-      className="bg-white rounded-lg p-6 shadow-lg hover:shadow-xl transition-all"
+      className="bg-navy-light rounded-lg p-6 shadow-lg hover:shadow-xl transition-all border border-border"
     >
       <div className="flex items-center mb-4">
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            task.difficulty === "Easy"
-              ? "bg-green-100"
-              : task.difficulty === "Medium"
-              ? "bg-blue-100"
-              : "bg-orange-100"
-          }`}
-        >
-          <span className="text-sm font-medium">{task.company[0]}</span>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-indigo bg-opacity-20">
+          <span className="text-sm font-medium text-indigo">
+            {task.company[0]}
+          </span>
         </div>
-        <span className="ml-3 font-medium">{task.company}</span>
+        <span className="ml-3 font-medium text-text-primary">
+          {task.company}
+        </span>
         <motion.span
           whileHover={{ scale: 1.1 }}
           className={`ml-auto px-3 py-1 rounded-full text-sm ${
             task.difficulty === "Easy"
-              ? "bg-green-100 text-green-800"
+              ? "bg-status-success bg-opacity-20 text-status-success"
               : task.difficulty === "Medium"
-              ? "bg-blue-100 text-blue-800"
-              : "bg-orange-100 text-orange-800"
+              ? "bg-indigo bg-opacity-20 text-indigo"
+              : "bg-accent-yellow bg-opacity-20 text-accent-yellow"
           }`}
         >
           {task.difficulty}
         </motion.span>
       </div>
-      <h3 className="text-lg font-semibold mb-2">{task.title}</h3>
-      <p className="text-gray-600 mb-4">{task.description}</p>
+      <h3 className="text-lg font-semibold mb-2 text-text-primary">
+        {task.title}
+      </h3>
+      <p className="text-text-secondary mb-4">{task.description}</p>
       <div className="flex items-center justify-between">
-        <div className="text-green-600 font-semibold">${task.payout}</div>
-        <div className="text-gray-500 flex items-center">
+        <div className="text-accent-yellow font-semibold">${task.payout}</div>
+        <div className="text-text-secondary flex items-center">
           <svg
             className="w-4 h-4 mr-1"
             fill="none"
@@ -122,11 +120,11 @@ const TaskCard = ({ task, index }) => {
           {task.duration} days
         </div>
       </div>
-      <Link to={`/task/${task.id}`}>
+      <Link to={`/task-details/${task.id}`}>
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="w-full mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors"
+          className="w-full mt-4 bg-indigo text-text-primary py-2 rounded-md hover:bg-indigo-hover transition-colors shadow-sm shadow-indigo/20"
         >
           View Details
         </motion.button>
@@ -222,7 +220,7 @@ const Exploretask = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-navy">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -230,7 +228,9 @@ const Exploretask = () => {
           transition={{ duration: 0.5 }}
           className="flex items-center justify-between mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-900">Explore Tasks</h1>
+          <h1 className="text-3xl font-bold text-text-primary">
+            Explore Tasks
+          </h1>
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -242,7 +242,7 @@ const Exploretask = () => {
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-64 px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-64 px-4 py-2 rounded-md border border-border bg-navy-light text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-hover placeholder:text-text-secondary"
             />
           </motion.div>
         </motion.div>
@@ -254,7 +254,7 @@ const Exploretask = () => {
             transition={{ duration: 0.5 }}
             className="col-span-1"
           >
-            <div className="bg-white rounded-lg p-6 shadow-md">
+            <div className="bg-navy-light rounded-lg p-6 shadow-md border border-border">
               <SidebarFilter
                 title="Categories"
                 options={filterCategories}
@@ -291,7 +291,7 @@ const Exploretask = () => {
                     animate={{ opacity: 1 }}
                     className="col-span-2 text-center py-12"
                   >
-                    <p className="text-gray-600 text-lg">
+                    <p className="text-text-secondary text-lg">
                       No tasks match your filters.
                     </p>
                   </motion.div>

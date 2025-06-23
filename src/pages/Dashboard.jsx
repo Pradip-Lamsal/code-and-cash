@@ -1,5 +1,7 @@
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useRef } from "react";
+import AnimatedCubes from "../components/AnimatedCubes";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -16,11 +18,26 @@ const staggerContainer = {
 };
 
 const Dashboard = () => {
+  // References for sections to track when they come into view
+  const howItWorksRef = useRef(null);
+  const featuredTasksRef = useRef(null);
+  const testimonialsRef = useRef(null);
+  const ctaRef = useRef(null);
+  
+  // Check if sections are in view
+  const howItWorksInView = useInView(howItWorksRef, { once: true, amount: 0.3 });
+  const featuredTasksInView = useInView(featuredTasksRef, { once: true, amount: 0.3 });
+  const testimonialsInView = useInView(testimonialsRef, { once: true, amount: 0.3 });
+  const ctaInView = useInView(ctaRef, { once: true, amount: 0.3 });
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="relative min-h-screen overflow-hidden bg-indigo-950">
+      {/* Animated Cubes Background with optimized performance */}
+      <AnimatedCubes count={25} performance="low" />
+
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-blue-100 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 py-20 bg-gradient-to-b from-indigo-950 to-indigo-900">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -31,7 +48,7 @@ const Dashboard = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
-              className="text-4xl font-bold text-gray-900 mb-4"
+              className="mb-4 text-4xl font-bold text-slate-50"
             >
               Connect, Code, and Earn
             </motion.h1>
@@ -39,7 +56,7 @@ const Dashboard = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.8 }}
-              className="text-xl text-gray-600 mb-8"
+              className="mb-8 text-xl text-slate-300"
             >
               Code and Cash connects talented developers with companies needing
               coding help. Save time, get paid, build your portfolio.
@@ -53,7 +70,7 @@ const Dashboard = () => {
             >
               <Link
                 to="/signup"
-                className="bg-blue-600 text-white px-8 py-3 rounded-md text-lg font-medium hover:bg-blue-700 inline-block"
+                className="inline-block px-8 py-3 text-lg font-medium bg-indigo-600 rounded-md shadow-lg text-slate-50 hover:bg-indigo-500 shadow-indigo-600/20"
               >
                 Join Now Free
               </Link>
@@ -63,20 +80,20 @@ const Dashboard = () => {
       </div>
 
       {/* How it Works Section */}
-      <div className="py-16" id="how-it-works">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={howItWorksRef} className="relative z-10 py-16 bg-indigo-900" id="how-it-works">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <motion.h2
             {...fadeInUp}
-            className="text-3xl font-bold text-center text-gray-900 mb-12"
+            animate={howItWorksInView ? "animate" : "initial"}
+            className="mb-12 text-3xl font-bold text-center text-slate-50"
           >
             How Code and Cash Works
           </motion.h2>
           <motion.div
             variants={staggerContainer}
             initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            animate={howItWorksInView ? "animate" : "initial"}
+            className="grid grid-cols-1 gap-8 md:grid-cols-3"
           >
             {[
               {
@@ -98,12 +115,12 @@ const Dashboard = () => {
               <motion.div
                 key={index}
                 variants={fadeInUp}
-                className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
+                className="p-6 transition-shadow duration-300 border rounded-lg shadow-md bg-indigo-800/70 backdrop-blur-sm border-slate-600 hover:shadow-xl hover:shadow-indigo-900/20"
               >
-                <div className="text-blue-600 text-xl font-semibold mb-4">
+                <div className="mb-4 text-xl font-semibold text-indigo-400">
                   {step.title}
                 </div>
-                <p className="text-gray-600">{step.description}</p>
+                <p className="text-slate-300">{step.description}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -111,31 +128,31 @@ const Dashboard = () => {
       </div>
 
       {/* Featured Tasks Section */}
-      <div className="bg-gray-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={featuredTasksRef} className="relative z-10 py-16 bg-gradient-to-b from-indigo-900 to-indigo-800">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
+            animate={featuredTasksInView ? { opacity: 1 } : { opacity: 0 }}
             transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="flex justify-between items-center mb-8"
+            className="flex items-center justify-between mb-8"
           >
-            <h2 className="text-3xl font-bold text-gray-900">Featured Tasks</h2>
-            <Link to="/" className="text-blue-600 hover:text-blue-700">
+            <h2 className="text-3xl font-bold text-slate-50">Featured Tasks</h2>
+            <Link
+              to="/exploretask"
+              className="text-indigo-400 hover:text-indigo-300"
+            >
               View All Tasks
             </Link>
           </motion.div>
           <motion.div
             variants={staggerContainer}
             initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            animate={featuredTasksInView ? "animate" : "initial"}
+            className="grid grid-cols-1 gap-8 md:grid-cols-3"
           >
             {[
               {
                 tag: "ReactJS",
-                tagColor: "blue",
                 rate: "$75/hour",
                 title: "Build a React Component Library",
                 description:
@@ -143,7 +160,6 @@ const Dashboard = () => {
               },
               {
                 tag: "Node.js",
-                tagColor: "green",
                 rate: "$90/hour",
                 title: "API Integration for Payment Gateway",
                 description:
@@ -152,7 +168,6 @@ const Dashboard = () => {
               // Add a third featured task
               {
                 tag: "Vue.js",
-                tagColor: "emerald",
                 rate: "$85/hour",
                 title: "E-commerce Dashboard",
                 description:
@@ -162,25 +177,26 @@ const Dashboard = () => {
               <motion.div
                 key={index}
                 variants={fadeInUp}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
+                className="overflow-hidden transition-shadow duration-300 border rounded-lg shadow-md bg-indigo-900/70 backdrop-blur-sm border-slate-600 hover:shadow-xl hover:shadow-indigo-900/30"
                 whileHover={{ y: -5 }}
               >
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <span
-                      className={`bg-${task.tagColor}-100 text-${task.tagColor}-800 px-3 py-1 rounded-full text-sm`}
-                    >
+                    <span className="px-3 py-1 text-sm text-indigo-400 rounded-full bg-indigo-600/30">
                       {task.tag}
                     </span>
-                    <span className="text-gray-600">{task.rate}</span>
+                    <span className="text-yellow-500">{task.rate}</span>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="mb-2 text-xl font-semibold text-slate-50">
                     {task.title}
                   </h3>
-                  <p className="text-gray-600 mb-4">{task.description}</p>
+                  <p className="mb-4 text-slate-300">{task.description}</p>
                   <motion.div whileHover={{ x: 5 }} className="inline-block">
-                    <Link to="/" className="text-blue-600 hover:text-blue-700">
-                      View Task →
+                    <Link
+                      to={`/task-details/${index + 1}`}
+                      className="flex items-center text-cyan-500 hover:text-cyan-400"
+                    >
+                      View Task <span className="ml-1">→</span>
                     </Link>
                   </motion.div>
                 </div>
@@ -191,63 +207,96 @@ const Dashboard = () => {
       </div>
 
       {/* Testimonials Section */}
-      <div className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+      <div ref={testimonialsRef} className="relative z-10 py-16 bg-gradient-to-b from-indigo-800 to-indigo-900">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <motion.h2
+            {...fadeInUp}
+            animate={testimonialsInView ? "animate" : "initial"}
+            className="mb-12 text-3xl font-bold text-center text-slate-50"
+          >
             What Our Users Say
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <p className="text-gray-600 mb-4">
+          </motion.h2>
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate={testimonialsInView ? "animate" : "initial"}
+            className="grid grid-cols-1 gap-8 md:grid-cols-2"
+          >
+            <motion.div
+              variants={fadeInUp}
+              className="p-6 transition-all duration-300 border rounded-lg shadow-lg border-slate-600 bg-indigo-800/50 backdrop-blur-sm hover:shadow-xl hover:shadow-indigo-900/30"
+            >
+              <p className="mb-4 text-slate-300">
                 "I found my ideal tasks quickly. The platform's easy to use and
                 payments are always on time."
               </p>
               <div className="flex items-center">
                 <div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="font-semibold text-indigo-400">
                     David Johnson
                   </div>
-                  <div className="text-gray-600 text-sm">
+                  <div className="text-sm text-slate-400">
                     Frontend Developer
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <p className="text-gray-600 mb-4">
+            </motion.div>
+            <motion.div
+              variants={fadeInUp}
+              className="p-6 transition-all duration-300 border rounded-lg shadow-lg border-slate-600 bg-indigo-800/50 backdrop-blur-sm hover:shadow-xl hover:shadow-indigo-900/30"
+            >
+              <p className="mb-4 text-slate-300">
                 "As a tech startup, finding reliable developers was a challenge.
                 Code and Cash made it simple and efficient."
               </p>
               <div className="flex items-center">
                 <div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="font-semibold text-indigo-400">
                     Michael Chen
                   </div>
-                  <div className="text-gray-600 text-sm">
+                  <div className="text-sm text-slate-400">
                     Tech Startup Founder
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
 
       {/* CTA Section */}
-      <div className="bg-blue-600 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to Start Your Coding Journey?
-          </h2>
-          <p className="text-blue-100 mb-8">
-            Join thousands of developers earning income on Code and Cash
-          </p>
-          <Link
-            to="/signup"
-            className="bg-white text-blue-600 px-8 py-3 rounded-md text-lg font-medium hover:bg-gray-100"
+      <div ref={ctaRef} className="relative z-10 py-16 bg-gradient-to-t from-indigo-950 to-indigo-900">
+        <div className="px-4 mx-auto text-center max-w-7xl sm:px-6 lg:px-8">
+          <motion.h2
+            initial={{ opacity: 0 }}
+            animate={ctaInView ? { opacity: 1 } : { opacity: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-4 text-3xl font-bold text-slate-50"
           >
-            Get Started
-          </Link>
+            Ready to Start Your Coding Journey?
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={ctaInView ? { opacity: 1 } : { opacity: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mb-8 text-slate-300"
+          >
+            Join thousands of developers earning income on Code and Cash
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={ctaInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Link
+              to="/signup"
+              className="px-8 py-3 text-lg font-medium transition-all duration-300 bg-yellow-500 rounded-md shadow-lg text-indigo-950 hover:bg-yellow-400 shadow-yellow-500/20"
+            >
+              Get Started
+            </Link>
+          </motion.div>
         </div>
       </div>
     </div>

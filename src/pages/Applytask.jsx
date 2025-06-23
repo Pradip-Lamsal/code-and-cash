@@ -1,7 +1,10 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 const Applytask = () => {
+  // Get task ID from URL parameters (if available)
+  const { id } = useParams();
+  console.log("Applying for task ID:", id);
   // Mock data for the application
   const applicationData = {
     taskTitle: "Build a React Component Library",
@@ -24,7 +27,7 @@ const Applytask = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-indigo-950 py-8">
       <div className="max-w-2xl mx-auto px-4">
         {/* Back Navigation */}
         <motion.div
@@ -34,7 +37,7 @@ const Applytask = () => {
         >
           <Link
             to="/dashboard"
-            className="text-blue-600 hover:text-blue-700 flex items-center"
+            className="text-cyan-500 hover:text-cyan-400 flex items-center"
           >
             <svg
               className="w-5 h-5 mr-2"
@@ -57,16 +60,16 @@ const Applytask = () => {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-lg shadow-lg p-6 mb-8"
+          className="bg-indigo-900 backdrop-blur-sm rounded-lg shadow-lg shadow-indigo-900/50 p-6 mb-8"
         >
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center"
+            className="w-16 h-16 mx-auto mb-4 bg-indigo-800/50 rounded-full flex items-center justify-center"
           >
             <svg
-              className="w-8 h-8 text-green-500"
+              className="w-8 h-8 text-status-success"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -83,7 +86,7 @@ const Applytask = () => {
             variants={fadeInUp}
             initial="initial"
             animate="animate"
-            className="text-2xl font-bold text-center text-gray-900 mb-2"
+            className="text-2xl font-bold text-center text-slate-50 mb-2"
           >
             Application Submitted Successfully!
           </motion.h1>
@@ -92,7 +95,7 @@ const Applytask = () => {
             initial="initial"
             animate="animate"
             transition={{ delay: 0.1 }}
-            className="text-center text-gray-600"
+            className="text-center text-slate-300"
           >
             Your application has been sent to the task provider for review.
           </motion.p>
@@ -104,30 +107,34 @@ const Applytask = () => {
           initial="initial"
           animate="animate"
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-lg shadow-lg p-6 mb-8"
+          className="bg-indigo-900 backdrop-blur-sm rounded-lg shadow-lg shadow-indigo-900/50 p-6 mb-8"
         >
-          <h2 className="text-lg font-semibold mb-4">Application Details</h2>
+          <h2 className="text-lg font-semibold mb-4 text-slate-50">
+            Application Details
+          </h2>
           <div className="space-y-4">
             <div className="flex justify-between">
-              <span className="text-gray-600">Task Title</span>
-              <span className="font-medium">{applicationData.taskTitle}</span>
+              <span className="text-slate-300">Task Title</span>
+              <span className="font-medium text-slate-50">
+                {applicationData.taskTitle}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Payout</span>
-              <span className="text-green-600 font-medium">
+              <span className="text-slate-300">Payout</span>
+              <span className="text-green-400 font-medium">
                 {applicationData.payout}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Application ID</span>
+              <span className="text-slate-300">Application ID</span>
               <div className="flex items-center">
-                <span className="font-medium">
+                <span className="font-medium text-slate-50">
                   {applicationData.applicationId}
                 </span>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="ml-2 text-gray-400 hover:text-gray-600"
+                  className="ml-2 text-slate-400 hover:text-slate-200"
                 >
                   <svg
                     className="w-5 h-5"
@@ -146,8 +153,10 @@ const Applytask = () => {
               </div>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Submitted At</span>
-              <span className="font-medium">{applicationData.submittedAt}</span>
+              <span className="text-slate-300">Submitted At</span>
+              <span className="font-medium text-slate-50">
+                {applicationData.submittedAt}
+              </span>
             </div>
           </div>
         </motion.div>
@@ -158,11 +167,11 @@ const Applytask = () => {
           initial="initial"
           animate="animate"
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-lg shadow-lg p-6 mb-8"
+          className="bg-indigo-900 backdrop-blur-sm rounded-lg shadow-lg shadow-indigo-900/50 p-6 mb-8"
         >
-          <h2 className="text-lg font-semibold mb-4 flex items-center">
+          <h2 className="text-lg font-semibold mb-4 flex items-center text-slate-50">
             <svg
-              className="w-5 h-5 mr-2 text-blue-500"
+              className="w-5 h-5 mr-2 text-cyan-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -186,7 +195,7 @@ const Applytask = () => {
                 className="flex items-start"
               >
                 <svg
-                  className="w-5 h-5 mr-2 text-green-500 mt-0.5"
+                  className="w-5 h-5 mr-2 text-indigo-400 mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -198,7 +207,7 @@ const Applytask = () => {
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <span className="text-gray-600">{step}</span>
+                <span className="text-slate-300">{step}</span>
               </motion.li>
             ))}
           </ul>
@@ -206,7 +215,7 @@ const Applytask = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
-            className="mt-4 text-sm text-gray-500"
+            className="mt-4 text-sm text-slate-400"
           >
             Expected Response Time: {applicationData.expectedResponse}
           </motion.p>
@@ -218,32 +227,34 @@ const Applytask = () => {
           initial="initial"
           animate="animate"
           transition={{ delay: 0.4 }}
-          className="bg-white rounded-lg shadow-lg p-6 mb-8"
+          className="bg-indigo-900 backdrop-blur-sm rounded-lg shadow-lg shadow-indigo-900/50 p-6 mb-8"
         >
-          <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
-          <p className="text-gray-600 mb-4">
+          <h2 className="text-lg font-semibold mb-4 text-slate-50">
+            Contact Information
+          </h2>
+          <p className="text-slate-300 mb-4">
             Provide your contact details for faster communication regarding this
             application.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-600 mb-2">
+              <label className="block text-sm text-slate-300 mb-2">
                 Email Address
               </label>
               <input
                 type="email"
                 placeholder="your@email.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-indigo-800/50 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-50"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-2">
+              <label className="block text-sm text-slate-300 mb-2">
                 WhatsApp Number
               </label>
               <input
                 type="tel"
                 placeholder="+1 (555) 123-4567"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-indigo-800/50 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-50"
               />
             </div>
           </div>
@@ -251,14 +262,14 @@ const Applytask = () => {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-slate-300 hover:text-slate-50"
             >
               Skip for Now
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              className="bg-indigo-600 text-slate-50 px-4 py-2 rounded-md hover:bg-indigo-500 shadow-lg shadow-indigo-600/20"
             >
               Save Contact Info
             </motion.button>
@@ -272,20 +283,20 @@ const Applytask = () => {
           transition={{ delay: 0.5 }}
           className="flex justify-between items-center"
         >
-          <Link to="/task/1">
+          <Link to={`/task-details/${id || 1}`}>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="text-blue-600 hover:text-blue-700"
+              className="text-cyan-500 hover:text-cyan-400"
             >
               View Task Details
             </motion.button>
           </Link>
-          <Link to="/explore">
+          <Link to="/exploretask">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              className="bg-indigo-600 text-slate-50 px-4 py-2 rounded-md hover:bg-indigo-500 shadow-lg shadow-indigo-600/20"
             >
               Browse More Tasks
             </motion.button>

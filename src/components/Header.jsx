@@ -1,87 +1,118 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Hide header on login and signup pages
+  const hideOnPaths = ["/login", "/signup", "/Login", "/Signup"];
+  const shouldHideHeader = hideOnPaths.includes(location.pathname);
+
+  // Close mobile menu when changing routes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const navLinks = [
-    { to: "/#how-it-works", label: "How it Works" },
-    { to: "/explore", label: "Explore Tasks" },
-    { to: "/developers", label: "For Developers" },
-    { to: "/business", label: "For Business" },
+    { to: "/exploretask", label: "Explore Tasks" },
     { to: "/help", label: "Help" },
+    { to: "/#about", label: "About Us" },
+    { to: "/admin/task-management", label: "Admin" },
   ];
 
-  return (
+  return shouldHideHeader ? null : (
     <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6 }}
-      className="bg-white shadow-sm sticky top-0 z-50"
+      className="sticky top-0 z-50 border-b shadow-md bg-indigo-950 border-slate-600 bg-opacity-95 backdrop-blur-sm"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+      <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo - Left Side */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
               <motion.span
                 whileHover={{ scale: 1.05 }}
-                className="text-blue-600 text-xl font-semibold"
+                className="text-xl font-semibold text-indigo-400"
               >
                 Code and Cash
               </motion.span>
             </Link>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link, index) => (
-              <motion.div
-                key={link.label}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Link
-                  to={link.to}
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+          {/* Navigation Links - Middle */}
+          <div className="items-center justify-center flex-1 hidden mx-8 md:flex">
+            <div className="flex space-x-8">
+              {navLinks.map((link, index) => (
+                <motion.div
+                  key={link.label}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
                 >
-                  {link.label}
-                </Link>
-              </motion.div>
-            ))}
-
-            {/* Auth Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="flex items-center space-x-4"
-            >
-              <Link
-                to="/login"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Login
-              </Link>
-              <Link
-                to="/signup"
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Sign Up
-              </Link>
-            </motion.div>
+                  <Link
+                    to={link.to}
+                    className="transition-colors text-slate-50 hover:text-indigo-400"
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
           </div>
+
+          {/* Auth Buttons - Right Side */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="items-center hidden space-x-4 md:flex"
+          >
+            {/* Profile Icon */}
+            <Link
+              to="/profile"
+              className="transition-colors text-slate-300 hover:text-slate-50"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+            </Link>
+            <Link
+              to="/login"
+              className="transition-colors text-slate-300 hover:text-slate-50"
+            >
+              Login
+            </Link>
+            <Link
+              to="/signup"
+              className="px-4 py-2 transition-colors bg-indigo-600 rounded-md shadow-md text-slate-50 hover:bg-indigo-500 shadow-indigo-600/20"
+            >
+              Sign Up
+            </Link>
+          </motion.div>
 
           {/* Mobile Menu Button */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            className="p-2 rounded-md md:hidden text-slate-300 hover:text-slate-50 hover:bg-indigo-800"
           >
             <svg
-              className="h-6 w-6"
+              className="w-6 h-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -104,7 +135,7 @@ const Header = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden overflow-hidden"
+            className="overflow-hidden bg-indigo-900 border-t md:hidden border-slate-600"
           >
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               {navLinks.map((link) => (
@@ -116,24 +147,54 @@ const Header = () => {
                 >
                   <Link
                     to={link.to}
-                    className="block px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+                    className="block px-3 py-2 rounded-md text-slate-300 hover:text-slate-50 hover:bg-indigo-800"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {link.label}
                   </Link>
                 </motion.div>
               ))}
-              <div className="mt-4 flex flex-col space-y-2 px-3">
+
+              {/* Profile Link in Mobile Menu */}
+              <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -20, opacity: 0 }}
+              >
+                <Link
+                  to="/profile"
+                  className="flex items-center px-3 py-2 rounded-md text-slate-300 hover:text-slate-50 hover:bg-indigo-800"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5 mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  Profile
+                </Link>
+              </motion.div>
+
+              <div className="flex flex-col px-3 mt-4 space-y-2">
                 <Link
                   to="/login"
-                  className="block text-center py-2 text-gray-600 hover:text-gray-900"
+                  className="block py-2 text-center text-slate-300 hover:text-slate-50"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="block text-center bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+                  className="block py-2 text-center bg-indigo-600 rounded-md shadow-md text-slate-50 hover:bg-indigo-500 shadow-indigo-600/20"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Sign Up
