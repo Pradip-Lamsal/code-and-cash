@@ -1,8 +1,8 @@
 import { BrowserRouter as Router } from "react-router-dom";
-import Footer from "./components/Footer";
-import Header from "./components/Header";
-import TaskProvider from "./Provider/provider";
-import AppRoutes from "./routes";
+import Footer from "./components/common/Footer.jsx";
+import Header from "./components/common/Header.jsx";
+import TaskProvider from "./context/TaskProvider.jsx";
+import AppRoutes from "./routes/index.jsx";
 
 function App() {
   return (

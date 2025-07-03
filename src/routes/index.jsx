@@ -2,27 +2,27 @@ import { lazy, Suspense } from "react";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 
 // Lazy load components
-const Dashboard = lazy(() => import("../pages/Dashboard"));
-const Login = lazy(() => import("../pages/Login"));
-const Signup = lazy(() => import("../pages/Signup"));
-const Exploretask = lazy(() => import("../pages/Exploretask"));
-const TaskDetails = lazy(() => import("../pages/TaskDetails"));
-const Applytask = lazy(() => import("../pages/Applytask"));
-const Profile = lazy(() => import("../pages/profile"));
-const TaskManagement = lazy(() => import("../pages/admin/TaskManagement"));
-const ColorPalette = lazy(() => import("../components/ColorPalette"));
+const Dashboard = lazy(() => import("../pages/Dashboard.jsx"));
+const Login = lazy(() => import("../pages/auth/Login.jsx"));
+const Signup = lazy(() => import("../pages/auth/Signup.jsx"));
+const Exploretask = lazy(() => import("../pages/tasks/Exploretask.jsx"));
+const TaskDetails = lazy(() => import("../pages/tasks/TaskDetails.jsx"));
+const Applytask = lazy(() => import("../pages/tasks/Applytask.jsx"));
+const Profile = lazy(() => import("../pages/Profile.jsx"));
+const TaskManagement = lazy(() => import("../pages/admin/TaskManagement.jsx"));
+const ColorPalette = lazy(() => import("../components/ColorPalette.jsx"));
 
 // Placeholder page for routes that don't have implementations yet
 const PlaceholderPage = () => (
-  <div className="min-h-screen bg-indigo-950 flex items-center justify-center">
-    <div className="bg-indigo-900 backdrop-blur-sm p-8 rounded-lg shadow-lg shadow-indigo-900/50 max-w-md">
-      <h1 className="text-3xl font-bold text-slate-50 mb-4">Coming Soon</h1>
-      <p className="text-slate-300 mb-6">
+  <div className="flex items-center justify-center min-h-screen bg-indigo-950">
+    <div className="max-w-md p-8 bg-indigo-900 rounded-lg shadow-lg backdrop-blur-sm shadow-indigo-900/50">
+      <h1 className="mb-4 text-3xl font-bold text-slate-50">Coming Soon</h1>
+      <p className="mb-6 text-slate-300">
         This page is under development and will be available soon.
       </p>
       <Link
         to="/dashboard"
-        className="bg-indigo-600 text-slate-50 px-4 py-2 rounded-md hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 inline-block"
+        className="inline-block px-4 py-2 bg-indigo-600 rounded-md shadow-lg text-slate-50 hover:bg-indigo-500 shadow-indigo-600/20"
       >
         Return to Dashboard
       </Link>
@@ -32,9 +32,9 @@ const PlaceholderPage = () => (
 
 // Loading component
 const LoadingSpinner = () => (
-  <div className="min-h-screen flex items-center justify-center bg-indigo-950">
+  <div className="flex items-center justify-center min-h-screen bg-indigo-950">
     <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
+      <div className="w-12 h-12 mx-auto border-b-2 border-indigo-500 rounded-full animate-spin"></div>
       <p className="mt-4 text-slate-300">Loading...</p>
     </div>
   </div>

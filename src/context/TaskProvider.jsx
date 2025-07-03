@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { TaskContext, initialSubmissions, initialTasks } from "./TaskContext";
+import {
+  TaskContext,
+  initialSubmissions,
+  initialTasks,
+} from "./TaskContext.jsx";
 
 const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState(initialTasks);

@@ -53,10 +53,10 @@ const Footer = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-navy border-t border-border"
+        className="border-t bg-navy border-border"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="px-4 py-12 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {footerSections.map((section, sectionIndex) => (
               <m.div
                 key={section.title}
@@ -64,7 +64,7 @@ const Footer = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: sectionIndex * 0.1 }}
               >
-                <h3 className="text-sm font-semibold text-indigo tracking-wider uppercase mb-4">
+                <h3 className="mb-4 text-sm font-semibold tracking-wider uppercase text-indigo">
                   {section.title}
                 </h3>
                 <ul className="space-y-3">
@@ -79,7 +79,7 @@ const Footer = () => {
                     >
                       <Link
                         to={link.to}
-                        className="text-text-secondary hover:text-indigo transition-colors"
+                        className="transition-colors text-text-secondary hover:text-indigo"
                       >
                         {link.label}
                       </Link>
@@ -94,19 +94,19 @@ const Footer = () => {
             variants={fadeInUp}
             initial="initial"
             animate="animate"
-            className="mt-12 pt-8 border-t border-border"
+            className="pt-8 mt-12 border-t border-border"
           >
-            <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex flex-col items-center justify-between md:flex-row">
               <div className="flex items-center space-x-4">
-                <Link to="/" className="text-indigo font-semibold text-lg">
-                  Code and Cash
+                <Link to="/" className="text-lg font-semibold text-indigo">
+                  code & cash
                 </Link>
                 <span className="text-border">|</span>
                 <span className="text-text-secondary">
                   © 2025 All rights reserved
                 </span>
               </div>
-              <div className="flex items-center space-x-6 mt-4 md:mt-0">
+              <div className="flex items-center mt-4 space-x-6 md:mt-0">
                 {[
                   {
                     name: "Twitter",
@@ -134,7 +134,7 @@ const Footer = () => {
                   >
                     <span className="sr-only">{item.name}</span>
                     <svg
-                      className="h-6 w-6"
+                      className="w-6 h-6"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >

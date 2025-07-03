@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import AnimatedCubes from "../components/AnimatedCubes";
+import { Link, useNavigate } from "react-router-dom";
+import { signupAPI } from "../../api/authService.jsx";
+import AnimatedCubes from "../../components/AnimatedCubes.jsx";
 
 const Signup = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -12,6 +14,8 @@ const Signup = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -21,14 +25,48 @@ const Signup = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle signup logic here
-    console.log(formData);
+    setErrorMessage(""); // Clear previous errors
+    setIsLoading(true); // Show loading state
+
+    // Basic client-side validation for password match
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage("Passwords do not match!");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error, success, token } = await signupAPI({
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (!success || error) {
+        setErrorMessage(error || "Registration failed");
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if registration was successful (token is returned separately)
+      if (success && token) {
+        // Navigate to dashboard after successful registration
+        navigate("/dashboard");
+      } else {
+        setErrorMessage("Registration failed. Invalid response from server.");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Signup error:", err);
+      setErrorMessage("An error occurred during registration.");
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="h-screen w-full flex items-center justify-center bg-indigo-950 p-4">
+    <div className="flex items-center justify-center w-full h-screen p-4 bg-indigo-950">
       <AnimatedCubes count={10} />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -41,7 +79,7 @@ const Signup = () => {
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-1/2 p-12 flex flex-col justify-center bg-indigo-900/50 backdrop-blur-sm text-slate-50 relative"
+          className="relative flex flex-col justify-center w-1/2 p-12 bg-indigo-900/50 backdrop-blur-sm text-slate-50"
         >
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -49,10 +87,10 @@ const Signup = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mb-6"
           >
-            <h2 className="text-xl font-bold text-slate-50 mb-1 mt-5">
+            <h2 className="mt-5 mb-1 text-xl font-bold text-slate-50">
               Create Account
             </h2>
-            <p className="text-slate-300 text-sm">
+            <p className="text-sm text-slate-300">
               Join us to access unlimited data & information.
             </p>
           </motion.div>
@@ -70,7 +108,7 @@ const Signup = () => {
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
+                className="w-full px-4 py-3 transition border rounded-lg outline-none bg-indigo-800/50 border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 text-slate-50 placeholder-slate-400"
                 placeholder="Enter your full name"
                 required
               />
@@ -88,7 +126,7 @@ const Signup = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
+                className="w-full px-4 py-3 transition border rounded-lg outline-none bg-indigo-800/50 border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 text-slate-50 placeholder-slate-400"
                 placeholder="Enter your email address"
                 required
               />
@@ -107,7 +145,7 @@ const Signup = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
+                  className="w-full px-4 py-3 transition border rounded-lg outline-none bg-indigo-800/50 border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 text-slate-50 placeholder-slate-400"
                   placeholder="Create a password"
                   required
                 />
@@ -116,7 +154,7 @@ const Signup = () => {
                   whileTap={{ scale: 0.9 }}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"
+                  className="absolute -translate-y-1/2 right-3 top-1/2 text-slate-300"
                 >
                   {showPassword ? "👁️" : "👁️‍🗨️"}
                 </motion.button>
@@ -138,7 +176,7 @@ const Signup = () => {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
+                  className="w-full px-4 py-3 transition border rounded-lg outline-none bg-indigo-800/50 border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 text-slate-50 placeholder-slate-400"
                   placeholder="Confirm your password"
                   required
                 />
@@ -147,12 +185,23 @@ const Signup = () => {
                   whileTap={{ scale: 0.9 }}
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"
+                  className="absolute -translate-y-1/2 right-3 top-1/2 text-slate-300"
                 >
                   {showConfirmPassword ? "👁️" : "👁️‍🗨️"}
                 </motion.button>
               </div>
             </motion.div>
+
+            {/* Error Message Display */}
+            {errorMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 text-sm text-red-200 bg-red-500/20 border border-red-500/30 rounded-lg"
+              >
+                {errorMessage}
+              </motion.div>
+            )}
 
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -161,9 +210,10 @@ const Signup = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.8 }}
               type="submit"
-              className="w-full py-3 bg-indigo-600 text-slate-50 rounded-lg hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition duration-200 mt-6"
+              disabled={isLoading}
+              className="w-full py-3 mt-6 transition duration-200 bg-indigo-600 rounded-lg shadow-lg text-slate-50 hover:bg-indigo-500 shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign Up
+              {isLoading ? "Creating Account..." : "Sign Up"}
             </motion.button>
 
             <motion.div
@@ -177,7 +227,7 @@ const Signup = () => {
                   <div className="w-full border-t border-slate-600"></div>
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="px-4 bg-indigo-900 text-sm text-slate-400">
+                  <span className="px-4 text-sm bg-indigo-900 text-slate-400">
                     Or Sign up with
                   </span>
                 </div>
@@ -187,7 +237,7 @@ const Signup = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="button"
-                className="w-full py-3 border border-slate-600 rounded-lg text-slate-300 hover:bg-indigo-800/70 transition duration-200 flex items-center justify-center space-x-2"
+                className="flex items-center justify-center w-full py-3 space-x-2 transition duration-200 border rounded-lg border-slate-600 text-slate-300 hover:bg-indigo-800/70"
                 disabled
               >
                 <span className="text-xl">G</span>
@@ -199,7 +249,7 @@ const Signup = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 1 }}
-              className="text-center text-sm text-slate-400 mt-4 mb-5"
+              className="mt-4 mb-5 text-sm text-center text-slate-400"
             >
               Already have an account?{" "}
               <Link to="/login" className="text-yellow-500 hover:underline">
@@ -214,12 +264,12 @@ const Signup = () => {
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-1/2 relative overflow-hidden"
+          className="relative w-1/2 overflow-hidden"
         >
           <img
             src="/login.png"
             alt="Signup illustration"
-            className="w-full h-full object-cover"
+            className="object-cover w-full h-full"
           />
         </motion.div>
       </motion.div>

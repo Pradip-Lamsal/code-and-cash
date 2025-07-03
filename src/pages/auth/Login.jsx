@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AnimatedCubes from "../components/AnimatedCubes";
+import { loginAPI } from "../../api/authService.jsx";
+import AnimatedCubes from "../../components/AnimatedCubes.jsx";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -9,15 +10,49 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // For now, just navigate to dashboard
-    navigate("/dashboard");
+    setErrorMessage(""); // Clear previous errors
+    setIsLoading(true); // Show loading state
+
+    try {
+      const { error, success, token } = await loginAPI({
+        email,
+        password,
+      });
+
+      if (!success || error) {
+        // Show specific error message from the server or a default message
+        setErrorMessage(
+          error || "Login failed. Please check your credentials."
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if login was successful (token is returned separately)
+      if (success && token) {
+        // Set a flag to show profile completion reminder on dashboard
+        localStorage.setItem("showProfileReminder", "true");
+
+        // Navigate to dashboard
+        navigate("/dashboard");
+      } else {
+        setErrorMessage("Login failed. Invalid response from server.");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setErrorMessage("An error occurred while logging in. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="h-screen w-full flex items-center justify-center bg-indigo-950 p-4">
+    <div className="flex items-center justify-center w-full h-screen p-4 bg-indigo-950">
       <AnimatedCubes count={10} />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -30,7 +65,7 @@ const Login = () => {
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-1/2 p-12 flex flex-col justify-center bg-indigo-900/50 backdrop-blur-sm text-slate-50 relative"
+          className="relative flex flex-col justify-center w-1/2 p-12 bg-indigo-900/50 backdrop-blur-sm text-slate-50"
         >
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -38,10 +73,10 @@ const Login = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mb-6"
           >
-            <h2 className="text-xl font-bold text-slate-50 mb-1">
+            <h2 className="mb-1 text-xl font-bold text-slate-50">
               Welcome back!
             </h2>
-            <p className="text-slate-300 text-sm">
+            <p className="text-sm text-slate-300">
               Enter to get unlimited access to data & information.
             </p>
           </motion.div>
@@ -58,7 +93,7 @@ const Login = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
+                className="w-full px-4 py-3 transition border rounded-lg outline-none bg-indigo-800/50 border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 text-slate-50 placeholder-slate-400"
                 placeholder="Enter your mail address"
                 required
               />
@@ -76,14 +111,14 @@ const Login = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-indigo-800/50 border border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 outline-none transition text-slate-50 placeholder-slate-400"
+                  className="w-full px-4 py-3 transition border rounded-lg outline-none bg-indigo-800/50 border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/50 text-slate-50 placeholder-slate-400"
                   placeholder="Enter password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"
+                  className="absolute -translate-y-1/2 right-3 top-1/2 text-slate-300"
                 >
                   {showPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
@@ -101,7 +136,7 @@ const Login = () => {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 text-indigo-500 bg-indigo-800/50 border-slate-600 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-indigo-500 rounded bg-indigo-800/50 border-slate-600 focus:ring-indigo-500"
                 />
                 <span className="text-sm text-slate-300">Remember me</span>
               </label>
@@ -116,16 +151,58 @@ const Login = () => {
             </motion.div>
 
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: isLoading ? 1 : 1.02 }}
+              whileTap={{ scale: isLoading ? 1 : 0.98 }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.7 }}
               type="submit"
-              className="w-full py-3 bg-indigo-600 text-slate-50 rounded-lg hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 transition duration-200"
+              disabled={isLoading}
+              className={`w-full py-3 transition duration-200 rounded-lg shadow-lg text-slate-50 shadow-indigo-600/20 ${
+                isLoading
+                  ? "bg-indigo-700 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500"
+              }`}
             >
-              Log in
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 mr-3 -ml-1 text-white animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Logging in...
+                </div>
+              ) : (
+                "Log in"
+              )}
             </motion.button>
+
+            {/* Error Message */}
+            {errorMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 mt-3 text-sm text-red-200 rounded-md bg-red-900/50"
+              >
+                {errorMessage}
+              </motion.div>
+            )}
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -138,7 +215,7 @@ const Login = () => {
                   <div className="w-full border-t border-slate-600"></div>
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="px-4 bg-indigo-900 text-sm text-slate-400">
+                  <span className="px-4 text-sm bg-indigo-900 text-slate-400">
                     Or Login with
                   </span>
                 </div>
@@ -148,7 +225,7 @@ const Login = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 type="button"
-                className="w-full py-3 border border-slate-600 rounded-lg text-slate-300 hover:bg-indigo-800/70 transition duration-200 flex items-center justify-center space-x-2"
+                className="flex items-center justify-center w-full py-3 space-x-2 transition duration-200 border rounded-lg border-slate-600 text-slate-300 hover:bg-indigo-800/70"
                 disabled
               >
                 <span className="text-xl">G</span>
@@ -160,7 +237,7 @@ const Login = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.9 }}
-              className="text-center text-sm text-slate-400 mt-4 mb-5"
+              className="mt-4 mb-5 text-sm text-center text-slate-400"
             >
               Don't have an account?{" "}
               <motion.a
@@ -179,12 +256,12 @@ const Login = () => {
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="w-1/2 relative overflow-hidden"
+          className="relative w-1/2 overflow-hidden"
         >
           <img
             src="/login.png"
             alt="Login illustration"
-            className="w-full h-full object-cover"
+            className="object-cover w-full h-full"
           />
         </motion.div>
       </motion.div>
