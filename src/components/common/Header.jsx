@@ -35,7 +35,8 @@ const Header = () => {
   }, [location.pathname]);
 
   const navLinks = [
-    { to: "/exploretask", label: "Explore Tasks" },
+    { to: "/tasks/explore", label: "Explore Tasks" },
+    { to: "/my-tasks", label: "My Tasks" },
     { to: "/help", label: "Help" },
     { to: "/#about", label: "About Us" },
     { to: "/admin/task-management", label: "Admin" },

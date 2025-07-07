@@ -12,8 +12,16 @@ import { TaskStatusBadge } from "./TaskStatusBadge.jsx";
  * @param {Object} task - Task object containing all task details
  * @param {number} index - Index for stagger animation
  * @param {Function} onApprove - Function to handle task approval
+ * @param {Function} onDelete - Function to handle task deletion
+ * @param {Function} onStatusChange - Function to handle status changes
  */
-export const TaskCard = ({ task, index, onApprove }) => {
+export const TaskCard = ({
+  task,
+  index,
+  onApprove,
+  onDelete,
+  onStatusChange,
+}) => {
   const deadlineStatus = getDeadlineStatus(task.deadline);
   const isLate =
     task.submittedAt && isTaskLate(task.submittedAt, task.deadline);
@@ -135,21 +143,74 @@ export const TaskCard = ({ task, index, onApprove }) => {
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-2">
-          <Link to={`/task-details/${task.id}`} className="flex-1">
-            <button className="w-full px-3 py-2 text-sm transition-colors border rounded-lg text-indigo border-indigo hover:bg-indigo hover:text-white">
-              View Details
-            </button>
-          </Link>
-
+        <div className="space-y-2">
+          {/* Status Actions */}
           {task.status === "open" && (
-            <button
-              onClick={() => onApprove(task)}
-              className="px-4 py-2 text-sm text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700"
-            >
-              Approve
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onApprove(task)}
+                className="flex-1 px-3 py-2 text-sm text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() =>
+                  onStatusChange && onStatusChange(task.id, "submitted")
+                }
+                className="flex-1 px-3 py-2 text-sm text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                Mark Submitted
+              </button>
+            </div>
           )}
+
+          {task.status === "submitted" && (
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  onStatusChange && onStatusChange(task.id, "open")
+                }
+                className="flex-1 px-3 py-2 text-sm transition-colors border rounded-lg text-orange-600 border-orange-600 hover:bg-orange-600 hover:text-white"
+              >
+                Reopen
+              </button>
+              <button
+                onClick={() => onApprove(task)}
+                className="flex-1 px-3 py-2 text-sm text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700"
+              >
+                Complete
+              </button>
+            </div>
+          )}
+
+          {/* Common Actions */}
+          <div className="flex gap-2">
+            <Link to={`/task-details/${task.id}`} className="flex-1">
+              <button className="w-full px-3 py-2 text-sm transition-colors border rounded-lg text-indigo border-indigo hover:bg-indigo hover:text-white">
+                View Details
+              </button>
+            </Link>
+
+            <button
+              onClick={() => onDelete && onDelete(task.id)}
+              className="px-3 py-2 text-sm transition-colors border rounded-lg text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
+              title="Delete Task"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

@@ -38,6 +38,8 @@ export const API_ENDPOINTS = {
     UPDATE: "/api/tasks/:id",
     DELETE: "/api/tasks/:id",
     APPLY: "/api/tasks/:id/apply",
+    CATEGORIES: "/api/tasks/categories",
+    DIFFICULTIES: "/api/tasks/difficulties",
   },
   USERS: {
     LIST: "/api/users",

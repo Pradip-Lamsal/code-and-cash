@@ -8,8 +8,8 @@ const Signup = lazy(() => import("../pages/auth/Signup.jsx"));
 const Exploretask = lazy(() => import("../pages/tasks/Exploretask.jsx"));
 const TaskDetails = lazy(() => import("../pages/tasks/TaskDetails.jsx"));
 const Applytask = lazy(() => import("../pages/tasks/Applytask.jsx"));
+const MyAppliedTasks = lazy(() => import("../pages/tasks/MyAppliedTasks.jsx"));
 const Profile = lazy(() => import("../pages/Profile.jsx"));
-const TaskManagement = lazy(() => import("../pages/admin/TaskManagement.jsx"));
 const ColorPalette = lazy(() => import("../components/ColorPalette.jsx"));
 
 // Placeholder page for routes that don't have implementations yet
@@ -64,10 +64,13 @@ const AppRoutes = () => {
 
         {/* Task Related Routes */}
         <Route path="/exploretask" element={<Exploretask />} />
+        <Route path="/tasks/explore" element={<Exploretask />} />
         <Route
           path="/Exploretask"
           element={<Navigate to="/exploretask" replace />}
         />
+        <Route path="/my-tasks" element={<MyAppliedTasks />} />
+        <Route path="/tasks/my-applied" element={<MyAppliedTasks />} />
         <Route path="/task-details/:id" element={<TaskDetails />} />
         <Route
           path="/Task-details/:id"
@@ -78,13 +81,6 @@ const AppRoutes = () => {
         <Route
           path="/Applytask"
           element={<Navigate to="/applytask" replace />}
-        />
-
-        {/* Admin Routes */}
-        <Route path="/admin/task-management" element={<TaskManagement />} />
-        <Route
-          path="/Admin/Task-management"
-          element={<Navigate to="/admin/task-management" replace />}
         />
 
         {/* Color Palette - Dev Tool */}
