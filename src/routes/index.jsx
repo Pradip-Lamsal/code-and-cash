@@ -11,6 +11,22 @@ const Applytask = lazy(() => import("../pages/tasks/Applytask.jsx"));
 const MyAppliedTasks = lazy(() => import("../pages/tasks/MyAppliedTasks.jsx"));
 const Profile = lazy(() => import("../pages/Profile.jsx"));
 const ColorPalette = lazy(() => import("../components/ColorPalette.jsx"));
+const AdminHelper = lazy(() => import("../pages/AdminHelper.jsx"));
+
+// Admin Layout and Components
+const AdminLayout = lazy(() => import("../layouts/AdminLayout.jsx"));
+const AdminDashboard = lazy(() =>
+  import("../pages/admin/AdminDashboard_Simple.jsx")
+);
+const UsersManagement = lazy(() =>
+  import("../pages/admin/UsersManagement.jsx")
+);
+const TasksManagement = lazy(() =>
+  import("../pages/admin/TasksManagement.jsx")
+);
+const SubmissionsManagement = lazy(() =>
+  import("../pages/admin/SubmissionsManagement.jsx")
+);
 
 // Placeholder page for routes that don't have implementations yet
 const PlaceholderPage = () => (
@@ -86,10 +102,21 @@ const AppRoutes = () => {
         {/* Color Palette - Dev Tool */}
         <Route path="/colors" element={<ColorPalette />} />
 
+        {/* Admin Helper Tool */}
+        <Route path="/admin-helper" element={<AdminHelper />} />
+
         {/* Placeholder routes for incomplete pages */}
         <Route path="/developers" element={<PlaceholderPage />} />
         <Route path="/business" element={<PlaceholderPage />} />
         <Route path="/help" element={<PlaceholderPage />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UsersManagement />} />
+          <Route path="tasks" element={<TasksManagement />} />
+          <Route path="submissions" element={<SubmissionsManagement />} />
+        </Route>
 
         {/* Catch all - redirect to landing page */}
         <Route path="*" element={<Navigate to="/" replace />} />

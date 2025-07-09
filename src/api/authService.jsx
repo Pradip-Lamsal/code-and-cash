@@ -31,8 +31,18 @@ export const loginAPI = async (credentials) => {
 
     // Store token and user data in localStorage (matching your backend response format)
     if (data.token) {
+      // Special handling for admin@codeandcash.com - force admin role
+      if (credentials.email === "admin@codeandcash.com") {
+        if (data.data && data.data.user) {
+          data.data.user.role = "admin";
+          console.log("Setting admin role for admin@codeandcash.com");
+        }
+      }
+
       localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
+
+      console.log("User data stored in localStorage:", data.data.user);
     }
 
     return { success: true, data: data.data, token: data.token };
@@ -222,8 +232,20 @@ export const uploadProfileImage = async (formData) => {
  * Helper function to get current user from localStorage
  */
 export const getCurrentUser = () => {
-  const user = localStorage.getItem(STORAGE_KEYS.USER);
-  return user ? JSON.parse(user) : null;
+  try {
+    const user = localStorage.getItem(STORAGE_KEYS.USER);
+    if (!user) {
+      console.log("No user found in localStorage");
+      return null;
+    }
+
+    const parsedUser = JSON.parse(user);
+    console.log("getCurrentUser parsed result:", parsedUser);
+    return parsedUser;
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    return null;
+  }
 };
 
 /**

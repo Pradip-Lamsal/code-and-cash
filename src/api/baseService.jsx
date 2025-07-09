@@ -93,10 +93,32 @@ class ApiClient {
   }
 
   /**
+   * HTTP PATCH request
+   */
+  async patch(endpoint, data) {
+    return this.request(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
    * HTTP DELETE request
    */
   async delete(endpoint) {
     return this.request(endpoint, { method: "DELETE" });
+  }
+
+  /**
+   * Set authentication token
+   */
+  setToken(token) {
+    // Store token in localStorage for persistence
+    if (token) {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    }
   }
 }
 

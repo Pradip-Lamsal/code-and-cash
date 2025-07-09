@@ -18,7 +18,9 @@ export const ROUTES = {
   },
   ADMIN: {
     DASHBOARD: "/admin",
+    USERS: "/admin/users",
     TASKS: "/admin/tasks",
+    SUBMISSIONS: "/admin/submissions",
   },
 };
 

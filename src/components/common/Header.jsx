@@ -1,22 +1,61 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { adminService } from "../../api/adminService";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Hide header on login and signup pages
+  // Hide header on login, signup, and admin pages
   const hideOnPaths = ["/login", "/signup", "/Login", "/Signup"];
-  const shouldHideHeader = hideOnPaths.includes(location.pathname);
+  const shouldHideHeader =
+    hideOnPaths.includes(location.pathname) ||
+    location.pathname.startsWith("/admin");
 
-  // Check if user is logged in
+  // Check if user is logged in and if they're admin
   useEffect(() => {
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
+
+    // Check admin status if logged in
+    if (token) {
+      checkAdminStatus();
+    } else {
+      setIsAdmin(false);
+    }
   }, [location.pathname]);
+
+  const checkAdminStatus = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+      if (token && user) {
+        // First check if the user has admin role in their profile
+        if (user.role === "admin") {
+          setIsAdmin(true);
+          return;
+        }
+
+        // As a fallback, try the API check (but this might fail if endpoint doesn't exist)
+        try {
+          adminService.setToken(token);
+          await adminService.checkAdminAccess();
+          setIsAdmin(true);
+        } catch (error) {
+          console.warn("Admin API check failed:", error);
+          // Still keep admin = false here
+        }
+      }
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      setIsAdmin(false);
+    }
+  };
 
   // Handle logout
   const handleLogout = () => {
@@ -39,7 +78,7 @@ const Header = () => {
     { to: "/my-tasks", label: "My Tasks" },
     { to: "/help", label: "Help" },
     { to: "/#about", label: "About Us" },
-    { to: "/admin/task-management", label: "Admin" },
+    ...(isAdmin ? [{ to: "/admin", label: "Admin" }] : []),
   ];
 
   return shouldHideHeader ? null : (
