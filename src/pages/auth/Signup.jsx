@@ -15,6 +15,7 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -28,6 +29,7 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage(""); // Clear previous errors
+    setSuccessMessage(""); // Clear previous success messages
     setIsLoading(true); // Show loading state
 
     // Basic client-side validation for password match
@@ -38,7 +40,7 @@ const Signup = () => {
     }
 
     try {
-      const { error, success, token } = await signupAPI({
+      const { error, success } = await signupAPI({
         name: formData.fullName,
         email: formData.email,
         password: formData.password,
@@ -50,14 +52,14 @@ const Signup = () => {
         return;
       }
 
-      // Check if registration was successful (token is returned separately)
-      if (success && token) {
-        // Navigate to dashboard after successful registration
-        navigate("/dashboard");
-      } else {
-        setErrorMessage("Registration failed. Invalid response from server.");
-        setIsLoading(false);
-      }
+      // Show success message
+      setSuccessMessage("Registration successful! Redirecting to login...");
+      setIsLoading(false);
+
+      // Redirect to login page after 2 seconds
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (err) {
       console.error("Signup error:", err);
       setErrorMessage("An error occurred during registration.");
@@ -200,6 +202,17 @@ const Signup = () => {
                 className="p-3 text-sm text-red-200 bg-red-500/20 border border-red-500/30 rounded-lg"
               >
                 {errorMessage}
+              </motion.div>
+            )}
+
+            {/* Success Message Display */}
+            {successMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3 text-sm text-green-200 bg-green-500/20 border border-green-500/30 rounded-lg"
+              >
+                {successMessage}
               </motion.div>
             )}
 

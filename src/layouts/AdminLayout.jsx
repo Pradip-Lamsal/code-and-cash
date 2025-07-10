@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { Activity, FileText, Home, Send, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { adminService } from "../api/adminService.js";
@@ -29,14 +30,6 @@ export const AdminLayout = () => {
       console.log("User object:", user);
       console.log("User role:", user?.role);
       console.log("Token exists:", !!token);
-      console.log(
-        "Token value:",
-        token ? token.substring(0, 15) + "..." : "none"
-      );
-
-      // Check localStorage directly
-      console.log("Raw localStorage user:", localStorage.getItem("user"));
-      console.log("Raw localStorage token:", localStorage.getItem("token"));
 
       if (!user || !token) {
         console.log("❌ No user or token found, redirecting to login");
@@ -44,49 +37,50 @@ export const AdminLayout = () => {
         return;
       }
 
+      // Special handling for admin@codeandcash.com email
+      if (user.email === "admin@codeandcash.com" && user.role !== "admin") {
+        console.log("⚠️ Admin email without admin role - fixing");
+        user.role = "admin";
+        localStorage.setItem("user", JSON.stringify(user));
+        console.log("Fixed user object:", user);
+      }
+
       // Check if user has admin role from the user object
-      // This is the primary way we determine admin status
       console.log("Checking user role:", user.role);
       console.log("Is admin?", user.role === "admin");
 
       if (user.role === "admin") {
-        console.log("✅ User has admin role in their profile, granting access");
+        console.log("✅ User has admin role, granting access");
         setIsAdmin(true);
         setCurrentUser(user);
+        adminService.updateToken(token);
 
-        // Still set the token for future admin API calls
-        adminService.setToken(token);
-
-        // Try the API check, but don't fail if it doesn't work
+        // Try the API check, but don't fail if backend doesn't have the endpoint
         try {
-          await adminService.checkAdminAccess();
+          await adminService.checkAccess();
           console.log("✅ Admin API check passed");
         } catch (apiError) {
-          // Log the error but continue since we already verified via user.role
           console.warn(
-            "⚠️ Admin API check failed, but continuing with role-based access:",
-            apiError
+            "⚠️ Admin API check failed (this is OK if backend doesn't have this endpoint):",
+            apiError.message
           );
+          // Continue anyway since we verified via user.role
         }
       } else {
         console.error(
-          "❌ User does not have admin role. Current role:",
-          user.role
+          "❌ Access denied. User role:",
+          user.role,
+          "Expected: admin"
         );
-        console.error(
-          "❌ Expected: 'admin', Got:",
-          typeof user.role,
-          user.role
-        );
-        console.error("❌ Redirecting to dashboard");
-        navigate("/dashboard");
-        return;
+        // Show a helpful error message instead of redirecting
+        setIsAdmin(false);
+        setCurrentUser(user);
       }
 
       console.log("=== ADMIN ACCESS CHECK END ===");
     } catch (error) {
       console.error("❌ Admin access check error:", error);
-      navigate("/dashboard");
+      setIsAdmin(false);
     } finally {
       setLoading(false);
     }
@@ -107,84 +101,27 @@ export const AdminLayout = () => {
     {
       path: "/admin",
       label: "Dashboard",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 5a2 2 0 012-2h4a2 2 0 012 2v3H8V5z"
-          />
-        </svg>
-      ),
+      icon: <Home className="w-5 h-5" />,
     },
     {
       path: "/admin/users",
       label: "Users",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-          />
-        </svg>
-      ),
+      icon: <Users className="w-5 h-5" />,
     },
     {
       path: "/admin/tasks",
       label: "Tasks",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-          />
-        </svg>
-      ),
+      icon: <FileText className="w-5 h-5" />,
     },
     {
-      path: "/admin/submissions",
-      label: "Submissions",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-      ),
+      path: "/admin/applications",
+      label: "Applications",
+      icon: <Send className="w-5 h-5" />,
+    },
+    {
+      path: "/admin/activity-logs",
+      label: "Activity Logs",
+      icon: <Activity className="w-5 h-5" />,
     },
   ];
 

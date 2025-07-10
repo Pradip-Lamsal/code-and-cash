@@ -15,18 +15,17 @@ const AdminHelper = lazy(() => import("../pages/AdminHelper.jsx"));
 
 // Admin Layout and Components
 const AdminLayout = lazy(() => import("../layouts/AdminLayout.jsx"));
-const AdminDashboard = lazy(() =>
-  import("../pages/admin/AdminDashboard_Simple.jsx")
-);
+const AdminDashboard = lazy(() => import("../pages/admin/AdminDashboard.jsx"));
 const UsersManagement = lazy(() =>
   import("../pages/admin/UsersManagement.jsx")
 );
 const TasksManagement = lazy(() =>
   import("../pages/admin/TasksManagement.jsx")
 );
-const SubmissionsManagement = lazy(() =>
-  import("../pages/admin/SubmissionsManagement.jsx")
+const ApplicationsManagement = lazy(() =>
+  import("../pages/admin/ApplicationsManagement.jsx")
 );
+const ActivityLogs = lazy(() => import("../pages/admin/ActivityLogs.jsx"));
 
 // Placeholder page for routes that don't have implementations yet
 const PlaceholderPage = () => (
@@ -115,7 +114,8 @@ const AppRoutes = () => {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UsersManagement />} />
           <Route path="tasks" element={<TasksManagement />} />
-          <Route path="submissions" element={<SubmissionsManagement />} />
+          <Route path="applications" element={<ApplicationsManagement />} />
+          <Route path="activity-logs" element={<ActivityLogs />} />
         </Route>
 
         {/* Catch all - redirect to landing page */}

@@ -15,6 +15,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
  */
 export const loginAPI = async (credentials) => {
   try {
+    console.log("Login attempt for:", credentials.email);
+
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: {
@@ -24,6 +26,7 @@ export const loginAPI = async (credentials) => {
     });
 
     const data = await response.json();
+    console.log("Login response:", data);
 
     if (!response.ok || data.status !== "success") {
       throw new Error(data.message || "Login failed");
@@ -31,18 +34,33 @@ export const loginAPI = async (credentials) => {
 
     // Store token and user data in localStorage (matching your backend response format)
     if (data.token) {
-      // Special handling for admin@codeandcash.com - force admin role
-      if (credentials.email === "admin@codeandcash.com") {
-        if (data.data && data.data.user) {
-          data.data.user.role = "admin";
-          console.log("Setting admin role for admin@codeandcash.com");
+      let userData = data.data?.user || data.user;
+
+      // CRITICAL FIX: Backend is not sending role field in login response
+      // Force admin role for admin@codeandcash.com since backend strips it
+      if (credentials.email.toLowerCase() === "admin@codeandcash.com") {
+        console.log("🔧 FIXING: Backend missing role field for admin user");
+        console.log("Original user data:", userData);
+
+        // Ensure we have a user object
+        if (!userData) {
+          userData = {
+            email: credentials.email,
+            name: "System Administrator",
+            id: "admin-user",
+          };
         }
+
+        // Force admin role since backend doesn't send it
+        userData.role = "admin";
+        console.log("✅ Fixed user data with admin role:", userData);
       }
 
+      // Store the corrected user data
       localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
 
-      console.log("User data stored in localStorage:", data.data.user);
+      console.log("Final user data stored in localStorage:", userData);
     }
 
     return { success: true, data: data.data, token: data.token };
@@ -72,11 +90,8 @@ export const signupAPI = async (userData) => {
       throw new Error(data.message || "Signup failed");
     }
 
-    // Store token and user data in localStorage (matching your backend response format)
-    if (data.token) {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.data.user));
-    }
+    // DON'T auto-store token and user data - let the user login manually
+    // This prevents auto-login after registration
 
     return { success: true, data: data.data, token: data.token };
   } catch (error) {
@@ -241,6 +256,17 @@ export const getCurrentUser = () => {
 
     const parsedUser = JSON.parse(user);
     console.log("getCurrentUser parsed result:", parsedUser);
+
+    // CRITICAL FIX: Backend doesn't send role field, so we need to ensure admin users have it
+    if (parsedUser && parsedUser.email === "admin@codeandcash.com") {
+      if (!parsedUser.role || parsedUser.role !== "admin") {
+        console.log("🔧 FIXING: Adding missing admin role to admin user");
+        parsedUser.role = "admin";
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(parsedUser));
+        console.log("✅ Admin role added:", parsedUser);
+      }
+    }
+
     return parsedUser;
   } catch (error) {
     console.error("Error getting current user:", error);

@@ -170,18 +170,21 @@ const Dashboard = () => {
         enhancedTaskAPI.setToken(token);
       }
 
-      const response = await enhancedTaskAPI.getFeaturedTasks(3);
+      // Get tasks with limit for featured section
+      const response = await enhancedTaskAPI.getTasks({
+        limit: 3,
+        status: "open", // Only show open tasks
+        page: 1,
+      });
 
       console.log("✅ Featured tasks response:", response);
 
-      // Handle different response structures
+      // Handle the response structure from backend
       let tasks = [];
-      if (response?.data?.tasks && Array.isArray(response.data.tasks)) {
-        tasks = response.data.tasks;
-      } else if (response?.tasks && Array.isArray(response.tasks)) {
+      if (response?.tasks && Array.isArray(response.tasks)) {
         tasks = response.tasks;
-      } else if (response?.data && Array.isArray(response.data)) {
-        tasks = response.data;
+      } else if (response?.data?.tasks && Array.isArray(response.data.tasks)) {
+        tasks = response.data.tasks;
       } else if (Array.isArray(response)) {
         tasks = response;
       }
@@ -198,34 +201,37 @@ const Dashboard = () => {
       // Fallback to mock data if API fails
       const mockTasks = [
         {
-          id: 1,
+          _id: "1",
           title: "Build a React Component Library",
           description:
             "Create reusable component library with full documentation...",
-          category: "ReactJS",
+          category: "frontend",
           payout: 75,
           company: "TechCorp",
-          difficulty: "Medium",
+          difficulty: "medium",
+          status: "open",
         },
         {
-          id: 2,
+          _id: "2",
           title: "API Integration for Payment Gateway",
           description:
             "Implement secure payment processing using Stripe API...",
-          category: "Node.js",
+          category: "backend",
           payout: 90,
           company: "DataSys",
-          difficulty: "Hard",
+          difficulty: "hard",
+          status: "open",
         },
         {
-          id: 3,
+          _id: "3",
           title: "E-commerce Dashboard",
           description:
             "Build a responsive admin dashboard with Vue.js and Tailwind...",
-          category: "Vue.js",
+          category: "fullstack",
           payout: 85,
           company: "WebSolutions",
-          difficulty: "Medium",
+          difficulty: "medium",
+          status: "open",
         },
       ];
       setFeaturedTasks(mockTasks);
@@ -241,7 +247,11 @@ const Dashboard = () => {
     console.log("Token:", localStorage.getItem(STORAGE_KEYS.TOKEN));
 
     try {
-      const response = await enhancedTaskAPI.getFeaturedTasks(3);
+      const response = await enhancedTaskAPI.getTasks({
+        limit: 3,
+        status: "open",
+        page: 1,
+      });
 
       const debugInfo = {
         success: true,
@@ -249,8 +259,8 @@ const Dashboard = () => {
         responseType: typeof response,
         keys: response ? Object.keys(response) : null,
         tasksCount:
-          response?.data?.tasks?.length ||
           response?.tasks?.length ||
+          response?.data?.tasks?.length ||
           (Array.isArray(response?.data) ? response.data.length : 0) ||
           (Array.isArray(response) ? response.length : 0) ||
           0,
@@ -282,6 +292,9 @@ const Dashboard = () => {
         const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
         if (token) {
           setIsLoggedIn(true);
+
+          // Set token for enhanced API
+          enhancedTaskAPI.setToken(token);
 
           // Get current user
           const currentUser = getCurrentUser();
@@ -722,7 +735,7 @@ const Dashboard = () => {
                 >
                   {featuredTasks.map((task, index) => (
                     <motion.div
-                      key={task.id || index}
+                      key={task._id || task.id || index}
                       variants={fadeInUp}
                       className="overflow-hidden transition-shadow duration-300 border rounded-lg shadow-md bg-indigo-900/70 backdrop-blur-sm border-slate-600 hover:shadow-xl hover:shadow-indigo-900/30"
                       whileHover={{ y: -5 }}
@@ -730,23 +743,25 @@ const Dashboard = () => {
                       <div className="p-6">
                         <div className="flex items-center justify-between mb-4">
                           <span className="px-3 py-1 text-sm text-indigo-400 rounded-full bg-indigo-600/30">
-                            {task.category || task.tag || "General"}
+                            {task.category || "General"}
                           </span>
                           <span className="text-yellow-500">
-                            ${task.payout || task.rate || 0}
+                            ${task.payout || task.budget || 0}
                           </span>
                         </div>
                         <h3 className="mb-2 text-xl font-semibold text-slate-50">
                           {task.title}
                         </h3>
-                        <p className="mb-4 text-slate-300">
+                        <p className="mb-4 text-slate-300 line-clamp-3">
                           {task.description}
                         </p>
                         <div className="flex items-center justify-between mb-4">
                           <span className="text-sm text-slate-400">
-                            {task.company || "Unknown Company"}
+                            {task.company ||
+                              task.clientId?.name ||
+                              "Unknown Company"}
                           </span>
-                          <span className="text-sm text-slate-400">
+                          <span className="text-sm text-slate-400 capitalize">
                             {task.difficulty || "Medium"}
                           </span>
                         </div>
@@ -755,7 +770,7 @@ const Dashboard = () => {
                           className="inline-block"
                         >
                           <Link
-                            to={`/task-details/${task.id}`}
+                            to={`/task-details/${task._id || task.id}`}
                             className="flex items-center text-cyan-500 hover:text-cyan-400"
                           >
                             View Task <span className="ml-1">→</span>
