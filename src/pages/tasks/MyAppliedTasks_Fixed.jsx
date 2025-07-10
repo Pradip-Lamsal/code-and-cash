@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getMyAppliedTasks, submitFiles } from "../../api/appliedTasksService";
 import { getCurrentUser, isLoggedIn } from "../../api/authService";
-import enhancedTaskAPI from "../../api/enhancedTaskAPI";
 import {
   ScrollReveal,
   ScrollRevealGroup,
@@ -14,12 +14,16 @@ import { formatDate } from "../../utils/taskUtils";
 /**
  * My Applied Tasks Page Component
  *
- * FIXED ISSUES:
- * 1. ✅ Enhanced token management as per integration guide
- * 2. ✅ Proper authentication error handling with 401/403 detection
- * 3. ✅ Token persistence across page reloads
- * 4. ✅ Improved error handling for backend API responses
- * 5. ✅ Better debugging tools for API troubleshooting
+ * This component displays all tasks that the logged-in user has applied for.
+ * Features include:
+ * - Authentication check and redirect to login if not authenticated
+ * - Real backend API integration for fetching user's applied tasks
+ * - Task filtering by status (applied, in-progress, submitted)
+ * - Multiple file upload for task submissions (PDF/DOCX, up to 5 files)
+ * - Progress tracking with visual indicators
+ * - Responsive design with animations
+ * - Real-time status updates from backend
+ * - Comprehensive error handling and user feedback
  */
 const MyAppliedTasks = () => {
   const navigate = useNavigate();
@@ -38,283 +42,190 @@ const MyAppliedTasks = () => {
   const [user, setUser] = useState(null);
   const [isLoadingNewApplication, setIsLoadingNewApplication] = useState(false);
 
-  // Authentication error handler
-  const handleAuthError = useCallback(() => {
-    console.log("🔒 Authentication error detected, clearing session");
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.USER);
-    enhancedTaskAPI.setToken(null); // Clear token from API instance
-    navigate(ROUTES.LOGIN);
-  }, [navigate]);
-
   // Check for new application from navigation state
   useEffect(() => {
     if (location.state?.refreshData && location.state?.newApplication) {
-      console.log("New application detected:", location.state.newApplication);
+      console.log(
+        "New application detected, will refresh data:",
+        location.state.newApplication
+      );
       setIsLoadingNewApplication(true);
 
-      // FIXED: Safely access taskTitle with proper fallback
+      // Safely access taskTitle with fallback
       const taskTitle =
-        location.state.newApplication?.taskTitle ||
-        location.state.newApplication?.title ||
-        "Unknown Task";
-
-      setSuccessMessage(`✅ Successfully applied to "${taskTitle}"`);
+        location.state.newApplication?.taskTitle || "Unknown Task";
+      setSuccessMessage(
+        `Application submitted successfully for "${taskTitle}"!`
+      );
       setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 5000);
 
-      // Auto-hide toast after 4 seconds
-      setTimeout(() => setShowSuccessToast(false), 4000);
-
-      // Clear navigation state to prevent repeated processing
-      window.history.replaceState({}, document.title);
+      // Clear the navigation state to prevent showing the message again
+      navigate("/my-tasks", { replace: true });
     }
   }, [location.state, navigate]);
 
-  // ENHANCED: Initialize authentication with improved token management
+  // Check authentication on component mount
   useEffect(() => {
-    const initializeAuth = async () => {
+    const checkAuth = async () => {
       try {
-        console.log("🔐 Initializing authentication...");
+        console.log("Checking authentication...");
 
         // Check if user is logged in
         if (!isLoggedIn()) {
-          console.log("❌ User not logged in, redirecting to login");
+          console.log("User not logged in, redirecting...");
+          // Redirect to login page if not authenticated
           navigate(ROUTES.LOGIN);
           return;
         }
 
-        // Get current user and token
+        // Get current user data and token
         const currentUser = getCurrentUser();
         const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
 
-        console.log("👤 Current user:", currentUser?.email || "Unknown");
-        console.log("🔑 Token present:", !!token);
+        console.log("Current user:", currentUser);
+        console.log("Token exists:", !!token);
 
-        // Validate user and token
         if (!currentUser || !token) {
-          console.log("❌ Missing user data or token");
-          handleAuthError();
+          console.log("Missing user or token, redirecting...");
+          navigate(ROUTES.LOGIN);
           return;
         }
 
-        // CRITICAL: Set token in enhanced API instance
-        enhancedTaskAPI.setToken(token);
-        console.log("✅ Token set in API instance");
-
-        // Test token validity with a simple API call
-        try {
-          console.log("🧪 Testing token validity...");
-          await enhancedTaskAPI.getMyAppliedTasks({
-            status: "all",
-            limit: 1,
-            page: 1,
-          });
-          console.log("✅ Token is valid");
-        } catch (tokenError) {
-          console.error("❌ Token validation failed:", tokenError);
-
-          // Check if it's an authentication error
-          if (
-            tokenError.message.includes("401") ||
-            tokenError.message.includes("403") ||
-            tokenError.message.includes("Unauthorized") ||
-            tokenError.message.includes("Forbidden") ||
-            tokenError.status === 401 ||
-            tokenError.status === 403
-          ) {
-            console.log("🔒 Token is invalid or expired");
-            handleAuthError();
-            return;
-          }
-
-          // If it's not an auth error, we can continue (might be server issue)
-          console.log(
-            "⚠️ Non-auth error during token validation, continuing..."
-          );
-        }
-
+        // Token is automatically handled by baseService
         setUser(currentUser);
-        console.log("✅ Authentication initialization complete");
+        console.log("Authentication successful, user set");
       } catch (error) {
-        console.error("❌ Authentication initialization failed:", error);
-        handleAuthError();
+        console.error("Authentication check failed:", error);
+        navigate(ROUTES.LOGIN);
       }
     };
 
-    initializeAuth();
-  }, [navigate, handleAuthError]);
+    checkAuth();
+  }, [navigate]);
 
-  // ENHANCED: Better API debugging and error handling
+  // Fetch applied tasks from backend API
   const fetchAppliedTasksFromAPI = useCallback(async () => {
     try {
-      console.log("=== FETCHING APPLIED TASKS ===");
-      const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-      console.log("🔑 Token present:", !!token);
-      console.log("👤 User ID:", user?.id || user?._id || "Unknown");
+      console.log("Fetching applied tasks from API...");
+      console.log(
+        "Auth Token:",
+        localStorage.getItem(STORAGE_KEYS.TOKEN) ? "Present" : "Missing"
+      );
 
-      // Ensure token is set in API instance
-      if (token) {
-        enhancedTaskAPI.setToken(token);
-      } else {
-        throw new Error("No authentication token found");
-      }
-
-      // Make API call with enhanced error handling
-      const response = await enhancedTaskAPI.getMyAppliedTasks({
+      // Get applied tasks from backend using new unified service
+      const response = await getMyAppliedTasks({
         status: "all",
-        limit: 50,
+        limit: 50, // Get more tasks to show comprehensive data
         page: 1,
       });
 
-      console.log("=== API RESPONSE ANALYSIS ===");
-      console.log("📊 Full Response:", JSON.stringify(response, null, 2));
-      console.log("🔍 Response Type:", typeof response);
-      console.log(
-        "🗝️ Response Keys:",
-        response ? Object.keys(response) : "No response"
-      );
+      console.log("Raw API Response:", response);
 
-      // Handle different possible response structures based on backend documentation
+      // Handle different possible response structures
       let applications = [];
 
       if (
-        response?.success &&
-        response?.data?.applications &&
+        response &&
+        response.data &&
+        response.data.applications &&
         Array.isArray(response.data.applications)
       ) {
         applications = response.data.applications;
-        console.log(
-          "✅ Using response.data.applications (standard backend format)"
-        );
+        console.log("Using response.data.applications:", applications);
       } else if (
-        response?.data?.applications &&
-        Array.isArray(response.data.applications)
-      ) {
-        applications = response.data.applications;
-        console.log("✅ Using response.data.applications");
-      } else if (
-        response?.applications &&
+        response &&
+        response.applications &&
         Array.isArray(response.applications)
       ) {
         applications = response.applications;
-        console.log("✅ Using response.applications");
-      } else if (response?.data && Array.isArray(response.data)) {
+        console.log("Using response.applications:", applications);
+      } else if (response && Array.isArray(response.data)) {
         applications = response.data;
-        console.log("✅ Using response.data as array");
-      } else if (Array.isArray(response)) {
+        console.log("Using response.data:", applications);
+      } else if (response && Array.isArray(response)) {
         applications = response;
-        console.log("✅ Using response as direct array");
+        console.log("Using response directly:", applications);
       } else {
-        console.warn("⚠️ Unexpected API response structure");
+        console.warn("Unexpected API response structure:", response);
         console.warn(
-          "📋 Expected backend format: { success: true, data: { applications: [...] } }"
+          "Response keys:",
+          response ? Object.keys(response) : "No response"
         );
-        console.warn("📋 Received:", response);
-
-        // Check if response indicates an error
-        if (response?.error || response?.message) {
-          throw new Error(
-            response.error || response.message || "Invalid response format"
-          );
-        }
-
         return [];
       }
 
-      console.log("=== FINAL RESULT ===");
-      console.log("📈 Applications Count:", applications.length);
+      console.log("Final applications:", applications);
+      console.log("Applications length:", applications.length);
 
-      if (applications.length > 0) {
-        console.log("📋 Sample Application:", applications[0]);
-
-        // Analyze what fields are present in the first application
-        const sampleApp = applications[0];
+      // If no applications found, check if this is expected
+      if (applications.length === 0) {
         console.log(
-          "🔍 Available fields in application:",
-          Object.keys(sampleApp)
-        );
-
-        // Check for nested task object
-        if (sampleApp.task) {
-          console.log(
-            "📋 Task object found with fields:",
-            Object.keys(sampleApp.task)
-          );
-        }
-
-        // Check for missing critical fields
-        const criticalFields = ["id", "status", "appliedAt"];
-        const missingFields = criticalFields.filter(
-          (field) => !sampleApp[field]
-        );
-
-        if (missingFields.length > 0) {
-          console.warn("⚠️ Missing critical fields:", missingFields);
-        }
-      } else {
-        console.log(
-          "ℹ️ No applications found - this could be normal for new users"
+          "No applications found. This could be normal if user hasn't applied to any tasks yet."
         );
       }
 
       return applications;
     } catch (error) {
-      console.error("=== API ERROR ===");
-      console.error("❌ Error Message:", error.message);
-      console.error("🔢 Error Status:", error.status);
-      console.error("📋 Error Response:", error.response?.data);
-      console.error("🔍 Full Error:", error);
+      console.error("Error fetching applied tasks:", error);
+      console.error("Error details:", {
+        message: error.message,
+        status: error.status,
+        response: error.response?.data,
+      });
 
-      // ENHANCED: Better authentication error detection
-      const isAuthError =
-        error.message.includes("401") ||
-        error.message.includes("403") ||
-        error.message.includes("Unauthorized") ||
-        error.message.includes("Forbidden") ||
+      // If authentication error, redirect to login
+      if (
         error.message.includes("token") ||
         error.message.includes("auth") ||
-        error.status === 401 ||
-        error.status === 403;
-
-      if (isAuthError) {
-        console.log("🔒 Authentication error detected");
-        handleAuthError();
+        error.status === 401
+      ) {
+        console.log(
+          "Authentication error detected, clearing tokens and redirecting to login"
+        );
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+        navigate(ROUTES.LOGIN);
         return [];
       }
 
       throw error;
     }
-  }, [user, handleAuthError]);
+  }, [navigate]);
 
   // Load applied tasks from API
   const loadAppliedTasks = useCallback(async () => {
-    console.log("🔄 Starting to load applied tasks...");
+    console.log("Starting to load applied tasks...");
     setIsLoading(true);
 
+    // Add a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      console.log("⏰ Loading timeout reached");
+      console.log("Loading timeout reached, stopping loading state");
       setIsLoading(false);
       setErrorMessage("Request took too long. Please try again.");
       setShowErrorToast(true);
       setTimeout(() => setShowErrorToast(false), 4000);
-    }, 15000);
+    }, 15000); // 15 second timeout
 
     try {
+      // Fetch applied tasks for the current user
       const tasks = await fetchAppliedTasksFromAPI();
       clearTimeout(timeoutId);
 
+      // Ensure tasks is an array
       const validTasks = Array.isArray(tasks) ? tasks : [];
-      console.log("✅ Setting applied tasks:", validTasks.length, "tasks");
+      console.log("Setting applied tasks:", validTasks);
 
       setAppliedTasks(validTasks);
       setFilteredTasks(validTasks);
     } catch (error) {
       clearTimeout(timeoutId);
-      console.error("❌ Error loading applied tasks:", error);
-      setErrorMessage(`Failed to load your applied tasks: ${error.message}`);
+      console.error("Error loading applied tasks:", error);
+      setErrorMessage("Failed to load your applied tasks. Please try again.");
       setShowErrorToast(true);
       setTimeout(() => setShowErrorToast(false), 4000);
 
+      // Set empty arrays on error to prevent UI issues
       setAppliedTasks([]);
       setFilteredTasks([]);
     } finally {
@@ -325,188 +236,66 @@ const MyAppliedTasks = () => {
   // Load applied tasks when user is set
   useEffect(() => {
     if (user) {
-      console.log(
-        "👤 Loading applied tasks for user:",
-        user.email || user.username || user.id
-      );
+      console.log("Loading applied tasks for user:", user);
 
+      // If coming from a new application submission, add a small delay
+      // to allow backend processing time
       if (location.state?.refreshData) {
-        console.log("⏳ Delaying load for new application processing...");
+        console.log("Delaying load for new application processing...");
         setTimeout(() => {
           loadAppliedTasks().finally(() => {
             setIsLoadingNewApplication(false);
           });
-        }, 1500);
+        }, 1500); // 1.5 second delay for backend processing
       } else {
         loadAppliedTasks();
       }
     }
-  }, [user, loadAppliedTasks, location.state]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
-  // Refresh functionality
+  // Add refresh functionality for better user experience
   const handleRefresh = useCallback(async () => {
-    console.log("🔄 Manual refresh triggered");
     await loadAppliedTasks();
   }, [loadAppliedTasks]);
 
-  // ENHANCED: Debug function with field analysis
+  // Debug function to test API directly
   const handleDebugAPI = useCallback(async () => {
-    console.log("🐛 ENHANCED DEBUG API CALL");
-    console.log("👤 User:", user?.email || "Unknown");
-    console.log(
-      "🔑 Token:",
-      localStorage.getItem(STORAGE_KEYS.TOKEN) ? "Present" : "Missing"
-    );
+    console.log("=== DEBUG API CALL ===");
+    console.log("Current user:", user);
+    console.log("Token:", localStorage.getItem(STORAGE_KEYS.TOKEN));
 
     try {
-      // Test token first
-      console.log("🧪 Testing API connection...");
-      const response = await enhancedTaskAPI.getMyAppliedTasks({
-        status: "all",
-        limit: 10,
-        page: 1,
-      });
+      const response = await getMyAppliedTasks({ status: "all" });
+      console.log("Debug API Response:", JSON.stringify(response, null, 2));
 
-      // Analyze response structure
-      let applications = [];
-      if (
-        response?.data?.applications &&
-        Array.isArray(response.data.applications)
-      ) {
-        applications = response.data.applications;
-      } else if (
-        response?.applications &&
-        Array.isArray(response.applications)
-      ) {
-        applications = response.applications;
-      } else if (response?.data && Array.isArray(response.data)) {
-        applications = response.data;
-      } else if (Array.isArray(response)) {
-        applications = response;
-      }
-
-      // Field analysis
-      const fieldAnalysis = {
-        totalApplications: applications.length,
-        sampleApplication: applications[0] || null,
-        commonFields: [],
-        missingFields: [],
-        taskFields: [],
-        missingTaskFields: [],
-      };
-
-      if (applications.length > 0) {
-        const sample = applications[0];
-        fieldAnalysis.commonFields = Object.keys(sample);
-
-        // Check for critical application fields
-        const criticalAppFields = [
-          "id",
-          "status",
-          "appliedAt",
-          "progress",
-          "submittedAt",
-        ];
-        fieldAnalysis.missingFields = criticalAppFields.filter(
-          (field) => !sample[field]
-        );
-
-        // Check task object
-        if (sample.task) {
-          fieldAnalysis.taskFields = Object.keys(sample.task);
-          const criticalTaskFields = [
-            "id",
-            "title",
-            "description",
-            "payout",
-            "company",
-            "difficulty",
-          ];
-          fieldAnalysis.missingTaskFields = criticalTaskFields.filter(
-            (field) => !sample.task[field]
-          );
-        }
-      }
-
-      const debugInfo = {
-        success: true,
-        apiResponse: {
-          structure: typeof response,
-          keys: response ? Object.keys(response) : null,
-          hasData: !!response?.data,
-          hasApplications: !!response?.applications,
-          isDirectArray: Array.isArray(response),
-        },
-        fieldAnalysis,
-        recommendations: [],
-      };
-
-      // Generate recommendations
-      if (fieldAnalysis.missingFields.length > 0) {
-        debugInfo.recommendations.push(
-          `Missing application fields: ${fieldAnalysis.missingFields.join(
-            ", "
-          )}`
-        );
-      }
-      if (fieldAnalysis.missingTaskFields.length > 0) {
-        debugInfo.recommendations.push(
-          `Missing task fields: ${fieldAnalysis.missingTaskFields.join(", ")}`
-        );
-      }
-      if (applications.length === 0) {
-        debugInfo.recommendations.push(
-          "No applications found - user may not have applied to any tasks yet"
-        );
-      }
-
-      console.log("✅ Debug Analysis:", debugInfo);
-      alert(`API Debug Analysis:\n${JSON.stringify(debugInfo, null, 2)}`);
+      // Show the raw response in an alert for debugging
+      alert(`API Response: ${JSON.stringify(response, null, 2)}`);
     } catch (error) {
-      const debugError = {
-        success: false,
-        message: error.message,
-        status: error.status,
-        response: error.response?.data,
-        isAuthError:
-          error.message.includes("401") ||
-          error.message.includes("403") ||
-          error.status === 401 ||
-          error.status === 403,
-        recommendations: [],
-      };
-
-      if (debugError.isAuthError) {
-        debugError.recommendations.push(
-          "Authentication failed - check token validity"
-        );
-        debugError.recommendations.push("Try logging out and logging back in");
-      } else {
-        debugError.recommendations.push("Check backend server status");
-        debugError.recommendations.push("Verify API endpoint configuration");
-      }
-
-      console.error("❌ Debug Error:", debugError);
-      alert(`API Error Analysis:\n${JSON.stringify(debugError, null, 2)}`);
+      console.error("Debug API Error:", error);
+      alert(`API Error: ${error.message}`);
     }
   }, [user]);
 
   // Filter tasks based on active filter
   useEffect(() => {
+    // Ensure appliedTasks is an array before filtering
     const tasksToFilter = Array.isArray(appliedTasks) ? appliedTasks : [];
 
     const filtered = tasksToFilter.filter((task) => {
-      if (!task) return false;
+      if (!task) return false; // Skip null/undefined tasks
 
       switch (activeFilter) {
-        case "pending":
-          return task.status === "pending";
-        case "accepted":
-          return task.status === "accepted";
-        case "rejected":
-          return task.status === "rejected";
-        case "completed":
-          return task.status === "completed";
+        case "applied":
+          return task.status === "applied" || task.status === "pending";
+        case "in-progress":
+          return (
+            task.status === "in-progress" ||
+            task.status === "approved" ||
+            task.status === "accepted"
+          );
+        case "submitted":
+          return task.status === "submitted" || task.status === "completed";
         default:
           return true;
       }
@@ -519,24 +308,22 @@ const MyAppliedTasks = () => {
     async (applicationId, files) => {
       if (!files || files.length === 0) return;
 
+      // Convert single file to array for consistency
       const fileArray = Array.isArray(files) ? files : [files];
 
       try {
         setUploadingTaskId(applicationId);
-        const result = await enhancedTaskAPI.submitFiles(
-          applicationId,
-          fileArray
-        );
 
+        // Submit files through backend API
+        const result = await submitFiles(applicationId, fileArray);
+
+        // Update task status locally
         const updatedTasks = appliedTasks.map((task) => {
-          if (
-            task.applicationId === applicationId ||
-            task.id === applicationId
-          ) {
+          if (task.applicationId === applicationId) {
             return {
               ...task,
               status: "submitted",
-              submissionFile: fileArray[0].name,
+              submissionFile: fileArray[0].name, // Show first file name
               submittedAt: new Date().toISOString(),
               progress: result.application?.progress || 100,
               timeRemaining: "Submitted",
@@ -577,7 +364,7 @@ const MyAppliedTasks = () => {
     return "from-gray-500 to-gray-600";
   };
 
-  // Filter options based on standard backend statuses
+  // Filter options
   const filterOptions = [
     {
       key: "all",
@@ -585,31 +372,34 @@ const MyAppliedTasks = () => {
       count: Array.isArray(appliedTasks) ? appliedTasks.length : 0,
     },
     {
-      key: "pending",
-      label: "Pending",
+      key: "applied",
+      label: "Applied",
       count: Array.isArray(appliedTasks)
-        ? appliedTasks.filter((t) => t && t.status === "pending").length
+        ? appliedTasks.filter(
+            (t) => t && (t.status === "applied" || t.status === "pending")
+          ).length
         : 0,
     },
     {
-      key: "accepted",
-      label: "Accepted",
+      key: "in-progress",
+      label: "In Progress",
       count: Array.isArray(appliedTasks)
-        ? appliedTasks.filter((t) => t && t.status === "accepted").length
+        ? appliedTasks.filter(
+            (t) =>
+              t &&
+              (t.status === "in-progress" ||
+                t.status === "approved" ||
+                t.status === "accepted")
+          ).length
         : 0,
     },
     {
-      key: "rejected",
-      label: "Rejected",
+      key: "submitted",
+      label: "Submitted",
       count: Array.isArray(appliedTasks)
-        ? appliedTasks.filter((t) => t && t.status === "rejected").length
-        : 0,
-    },
-    {
-      key: "completed",
-      label: "Completed",
-      count: Array.isArray(appliedTasks)
-        ? appliedTasks.filter((t) => t && t.status === "completed").length
+        ? appliedTasks.filter(
+            (t) => t && (t.status === "submitted" || t.status === "completed")
+          ).length
         : 0,
     },
   ];
@@ -792,7 +582,7 @@ const MyAppliedTasks = () => {
                     </button>
                     <button
                       onClick={handleDebugAPI}
-                      className="items-center hidden px-3 py-2 font-medium text-white transition-all duration-200 bg-yellow-600 rounded-lg shadow-lg sm:inline-flex hover:bg-yellow-500"
+                      className="items-center hidden px-3 py-2 font-medium text-white transition-all duration-200 rounded-lg shadow-lg sm:inline-flex bg-yellow-600 hover:bg-yellow-500"
                     >
                       🐛 Debug API
                     </button>
@@ -848,7 +638,7 @@ const MyAppliedTasks = () => {
               </motion.div>
             </ScrollReveal>
 
-            {/* Tasks Grid or Empty State */}
+            {/* Tasks Grid */}
             <ScrollRevealGroup>
               {filteredTasks.length === 0 ? (
                 <ScrollReveal>
@@ -888,54 +678,35 @@ const MyAppliedTasks = () => {
                             .find((f) => f.key === activeFilter)
                             ?.label.toLowerCase()} tasks at the moment.`}
                     </p>
-                    <div className="space-y-4">
-                      <Link
-                        to="/exploretask"
-                        className="inline-flex items-center px-6 py-3 font-medium text-white transition-all duration-200 rounded-lg shadow-lg bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 hover:shadow-xl"
+                    <Link
+                      to="/exploretask"
+                      className="inline-flex items-center px-6 py-3 font-medium text-white transition-all duration-200 rounded-lg shadow-lg bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 hover:shadow-xl"
+                    >
+                      <svg
+                        className="w-5 h-5 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <svg
-                          className="w-5 h-5 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                          />
-                        </svg>
-                        Explore Available Tasks
-                      </Link>
-                      <div>
-                        <button
-                          onClick={handleDebugAPI}
-                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-white transition-all duration-200 bg-yellow-600 rounded-lg shadow-lg hover:bg-yellow-500"
-                        >
-                          🐛 Debug API Response
-                        </button>
-                        <p className="mt-2 text-xs text-slate-500">
-                          Click to see the raw API response and help
-                          troubleshoot the issue
-                        </p>
-                      </div>
-                    </div>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                      Explore Available Tasks
+                    </Link>
                   </motion.div>
                 </ScrollReveal>
               ) : (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-                  {filteredTasks.map((application, index) => {
-                    // Handle both old format and new API format
-                    const task = application.task || application;
-                    const applicationData = application.task
-                      ? application
-                      : { id: application.id, status: application.status };
-
-                    if (!task || (!task.id && !applicationData.id)) return null;
+                  {filteredTasks.map((task, index) => {
+                    // Skip null or undefined tasks
+                    if (!task || !task.id) return null;
 
                     return (
-                      <ScrollReveal key={applicationData.id || task.id}>
+                      <ScrollReveal key={task.id}>
                         <motion.div
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -952,17 +723,11 @@ const MyAppliedTasks = () => {
                                   {task.title || "Untitled Task"}
                                 </h3>
                                 <p className="mb-2 text-sm text-slate-400">
-                                  {task.company ||
-                                    task.client?.name ||
-                                    "Unknown Company"}
+                                  {task.company || "Unknown Company"}
                                 </p>
                                 <div className="flex items-center gap-2 mb-3">
                                   <TaskStatusBadge
-                                    status={
-                                      applicationData.status ||
-                                      task.status ||
-                                      "unknown"
-                                    }
+                                    status={task.status || "unknown"}
                                   />
                                   <span className="px-2 py-1 text-xs rounded-full text-slate-400 bg-slate-700/50">
                                     {task.difficulty || "Medium"}
@@ -971,19 +736,10 @@ const MyAppliedTasks = () => {
                               </div>
                               <div className="text-right">
                                 <div className="text-xl font-bold text-green-400">
-                                  $
-                                  {(
-                                    task.payout ||
-                                    task.price ||
-                                    0
-                                  ).toLocaleString()}
+                                  ${(task.price || 0).toLocaleString()}
                                 </div>
                                 <div className="text-xs text-slate-400">
-                                  Applied{" "}
-                                  {formatDate(
-                                    applicationData.appliedAt ||
-                                      application.appliedAt
-                                  )}
+                                  Applied {formatDate(task.appliedAt)}
                                 </div>
                               </div>
                             </div>
@@ -993,44 +749,69 @@ const MyAppliedTasks = () => {
                               {task.description || "No description available"}
                             </p>
 
-                            {/* Progress Bar - Only show if progress is available */}
-                            {(applicationData.progress !== undefined ||
-                              task.progress !== undefined) && (
-                              <div className="mb-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-medium text-slate-300">
-                                    Progress
-                                  </span>
-                                  <span className="text-sm font-bold text-slate-50">
-                                    {applicationData.progress ||
-                                      task.progress ||
-                                      0}
-                                    %
-                                  </span>
-                                </div>
-                                <div className="w-full h-2 overflow-hidden rounded-full bg-slate-700/50">
-                                  <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{
-                                      width: `${
-                                        applicationData.progress ||
-                                        task.progress ||
-                                        0
-                                      }%`,
-                                    }}
-                                    transition={{
-                                      duration: 1,
-                                      delay: index * 0.1,
-                                    }}
-                                    className={`h-full rounded-full bg-gradient-to-r ${getProgressColor(
-                                      applicationData.progress ||
-                                        task.progress ||
-                                        0
-                                    )}`}
-                                  />
-                                </div>
+                            {/* Progress Bar */}
+                            <div className="mb-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-slate-300">
+                                  Progress
+                                </span>
+                                <span className="text-sm font-bold text-slate-50">
+                                  {task.progress || 0}%
+                                </span>
                               </div>
-                            )}
+                              <div className="w-full h-2 overflow-hidden rounded-full bg-slate-700/50">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${task.progress || 0}%` }}
+                                  transition={{
+                                    duration: 1,
+                                    delay: index * 0.1,
+                                  }}
+                                  className={`h-full rounded-full bg-gradient-to-r ${getProgressColor(
+                                    task.progress || 0
+                                  )}`}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Deadline and Time Info */}
+                            <div className="flex items-center justify-between mb-4 text-sm">
+                              <div className="text-slate-400">
+                                <span className="block">
+                                  Deadline:{" "}
+                                  {formatDate(task.deadline) || "No deadline"}
+                                </span>
+                                <span className="block">
+                                  Time remaining:{" "}
+                                  {task.timeRemaining || "Unknown"}
+                                </span>
+                              </div>
+                              <div className="text-slate-400">
+                                <span className="block">Last updated:</span>
+                                <span className="block">
+                                  {formatDate(task.lastUpdated) || "Never"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Skills */}
+                            <div className="flex flex-wrap gap-1 mb-4">
+                              {(task.skills || [])
+                                .slice(0, 3)
+                                .map((skill, skillIndex) => (
+                                  <span
+                                    key={skillIndex}
+                                    className="px-2 py-1 text-xs text-indigo-200 rounded-full bg-indigo-500/20"
+                                  >
+                                    {skill}
+                                  </span>
+                                ))}
+                              {(task.skills || []).length > 3 && (
+                                <span className="px-2 py-1 text-xs rounded-full bg-slate-600/50 text-slate-400">
+                                  +{(task.skills || []).length - 3} more
+                                </span>
+                              )}
+                            </div>
 
                             {/* Action Buttons */}
                             <div className="flex gap-2">
@@ -1041,9 +822,10 @@ const MyAppliedTasks = () => {
                                 View Details
                               </Link>
 
-                              {/* File upload - only for accepted applications */}
-                              {applicationData.status === "accepted" &&
-                                !applicationData.submittedAt && (
+                              {(task.status === "approved" ||
+                                task.status === "accepted" ||
+                                task.status === "in-progress") &&
+                                !task.submittedAt && (
                                   <div className="flex-1">
                                     <label className="relative cursor-pointer">
                                       <input
@@ -1052,39 +834,100 @@ const MyAppliedTasks = () => {
                                         multiple
                                         onChange={(e) =>
                                           handleFileUpload(
-                                            applicationData.id || task.id,
+                                            task.applicationId || task.id,
                                             Array.from(e.target.files)
                                           )
                                         }
                                         className="hidden"
                                         disabled={
                                           uploadingTaskId ===
-                                          (applicationData.id || task.id)
+                                          (task.applicationId || task.id)
                                         }
                                       />
                                       <div
                                         className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-center ${
                                           uploadingTaskId ===
-                                          (applicationData.id || task.id)
+                                          (task.applicationId || task.id)
                                             ? "bg-gradient-to-r from-slate-600 to-slate-700 text-slate-400 cursor-not-allowed"
                                             : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl"
                                         }`}
                                       >
                                         {uploadingTaskId ===
-                                        (applicationData.id || task.id)
-                                          ? "Uploading..."
-                                          : "Submit Work"}
+                                        (task.applicationId || task.id) ? (
+                                          <span className="flex items-center justify-center">
+                                            <svg
+                                              className="w-4 h-4 mr-1 animate-spin"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <circle
+                                                className="opacity-25"
+                                                cx="12"
+                                                cy="12"
+                                                r="10"
+                                                stroke="currentColor"
+                                                strokeWidth="4"
+                                                fill="none"
+                                              ></circle>
+                                              <path
+                                                className="opacity-75"
+                                                fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                              ></path>
+                                            </svg>
+                                            Uploading...
+                                          </span>
+                                        ) : (
+                                          "Submit Work"
+                                        )}
                                       </div>
                                     </label>
                                   </div>
                                 )}
 
-                              {applicationData.submittedAt && (
+                              {task.submittedAt && (
                                 <div className="flex-1 px-3 py-2 text-sm font-medium text-center text-purple-200 rounded-lg bg-purple-500/20">
                                   ✓ Submitted
                                 </div>
                               )}
                             </div>
+
+                            {/* Submission Info */}
+                            {task.submittedAt && (
+                              <div className="p-3 mt-3 border rounded-lg bg-purple-500/10 border-purple-500/20">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-purple-300">
+                                      📎{" "}
+                                      {task.submissionCount > 1
+                                        ? `${task.submissionCount} files submitted`
+                                        : task.submissionFile ||
+                                          "File submitted"}
+                                    </span>
+                                    <span className="text-purple-400">
+                                      {formatDate(task.submittedAt)}
+                                    </span>
+                                  </div>
+                                  {task.submissions &&
+                                    task.submissions.length > 1 && (
+                                      <div className="text-xs text-purple-300">
+                                        {task.submissions
+                                          .slice(0, 3)
+                                          .map((sub, idx) => (
+                                            <div key={idx} className="truncate">
+                                              • {sub.originalName}
+                                            </div>
+                                          ))}
+                                        {task.submissions.length > 3 && (
+                                          <div className="text-purple-400">
+                                            +{task.submissions.length - 3} more
+                                            files
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </motion.div>
                       </ScrollReveal>

@@ -1,7 +1,10 @@
 import { AnimatePresence, motion, useInView } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { getCurrentUser } from "../api/authService";
+import enhancedTaskAPI from "../api/enhancedTaskAPI";
 import AnimatedCubes from "../components/AnimatedCubes";
+import { STORAGE_KEYS } from "../constants/appConstants";
 
 // Profile Completion Reminder Component
 const ProfileCompletionReminder = ({ onClose }) => {
@@ -129,6 +132,14 @@ const Dashboard = () => {
   // State for personalized recommendations
   const [personalizedTasks, setPersonalizedTasks] = useState([]);
 
+  // State for featured tasks from API
+  const [featuredTasks, setFeaturedTasks] = useState([]);
+  const [isLoadingFeaturedTasks, setIsLoadingFeaturedTasks] = useState(false);
+  const [featuredTasksError, setFeaturedTasksError] = useState(null);
+
+  // State for user data
+  const [user, setUser] = useState(null);
+
   // Check if we should show the profile reminder on component mount
   useEffect(() => {
     const shouldShowReminder =
@@ -145,46 +156,180 @@ const Dashboard = () => {
     localStorage.removeItem("showProfileReminder");
   };
 
-  // Check if the user is logged in on component mount
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsLoggedIn(true);
+  // Function to fetch featured tasks from API
+  const fetchFeaturedTasks = useCallback(async () => {
+    try {
+      setIsLoadingFeaturedTasks(true);
+      setFeaturedTasksError(null);
 
-      // Mock personalized tasks - in a real implementation, you would fetch these from an API
-      const mockPersonalizedTasks = [
+      console.log("🔄 Fetching featured tasks from API...");
+
+      // Set auth token if available
+      const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+      if (token) {
+        enhancedTaskAPI.setToken(token);
+      }
+
+      const response = await enhancedTaskAPI.getFeaturedTasks(3);
+
+      console.log("✅ Featured tasks response:", response);
+
+      // Handle different response structures
+      let tasks = [];
+      if (response?.data?.tasks && Array.isArray(response.data.tasks)) {
+        tasks = response.data.tasks;
+      } else if (response?.tasks && Array.isArray(response.tasks)) {
+        tasks = response.tasks;
+      } else if (response?.data && Array.isArray(response.data)) {
+        tasks = response.data;
+      } else if (Array.isArray(response)) {
+        tasks = response;
+      }
+
+      // Take only first 3 tasks for featured section
+      const limitedTasks = tasks.slice(0, 3);
+      setFeaturedTasks(limitedTasks);
+
+      console.log("✅ Featured tasks loaded:", limitedTasks.length);
+    } catch (error) {
+      console.error("❌ Error fetching featured tasks:", error);
+      setFeaturedTasksError(error.message || "Failed to load featured tasks");
+
+      // Fallback to mock data if API fails
+      const mockTasks = [
         {
-          tag: "React + Tailwind",
-          rate: "$95",
-          title: "Dashboard UI Enhancement",
-          difficulty: "Intermediate",
-          matchPercentage: 98,
+          id: 1,
+          title: "Build a React Component Library",
           description:
-            "Improve an existing dashboard UI with modern components and animations...",
+            "Create reusable component library with full documentation...",
+          category: "ReactJS",
+          payout: 75,
+          company: "TechCorp",
+          difficulty: "Medium",
         },
         {
-          tag: "JavaScript",
-          rate: "$80",
-          title: "Performance Optimization",
-          difficulty: "Advanced",
-          matchPercentage: 92,
+          id: 2,
+          title: "API Integration for Payment Gateway",
           description:
-            "Optimize load times and runtime performance for a JavaScript-heavy application...",
+            "Implement secure payment processing using Stripe API...",
+          category: "Node.js",
+          payout: 90,
+          company: "DataSys",
+          difficulty: "Hard",
         },
         {
-          tag: "React Native",
-          rate: "$110",
-          title: "Mobile App Features",
-          difficulty: "Intermediate",
-          matchPercentage: 85,
+          id: 3,
+          title: "E-commerce Dashboard",
           description:
-            "Add new features to an existing React Native application with clean architecture...",
+            "Build a responsive admin dashboard with Vue.js and Tailwind...",
+          category: "Vue.js",
+          payout: 85,
+          company: "WebSolutions",
+          difficulty: "Medium",
         },
       ];
-
-      setPersonalizedTasks(mockPersonalizedTasks);
+      setFeaturedTasks(mockTasks);
+    } finally {
+      setIsLoadingFeaturedTasks(false);
     }
   }, []);
+
+  // Debug function to test featured tasks API directly
+  const handleDebugFeaturedTasksAPI = useCallback(async () => {
+    console.log("🐛 DEBUG FEATURED TASKS API CALL");
+    console.log("User:", user);
+    console.log("Token:", localStorage.getItem(STORAGE_KEYS.TOKEN));
+
+    try {
+      const response = await enhancedTaskAPI.getFeaturedTasks(3);
+
+      const debugInfo = {
+        success: true,
+        response: response,
+        responseType: typeof response,
+        keys: response ? Object.keys(response) : null,
+        tasksCount:
+          response?.data?.tasks?.length ||
+          response?.tasks?.length ||
+          (Array.isArray(response?.data) ? response.data.length : 0) ||
+          (Array.isArray(response) ? response.length : 0) ||
+          0,
+      };
+
+      console.log("Debug Response:", debugInfo);
+      alert(
+        `Featured Tasks API Response:\n${JSON.stringify(debugInfo, null, 2)}`
+      );
+    } catch (error) {
+      const debugError = {
+        success: false,
+        message: error.message,
+        status: error.status,
+        response: error.response?.data,
+      };
+
+      console.error("Debug Error:", debugError);
+      alert(
+        `Featured Tasks API Error:\n${JSON.stringify(debugError, null, 2)}`
+      );
+    }
+  }, [user]);
+
+  // Check if the user is logged in on component mount
+  useEffect(() => {
+    const checkAuthAndLoadData = async () => {
+      try {
+        const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+        if (token) {
+          setIsLoggedIn(true);
+
+          // Get current user
+          const currentUser = getCurrentUser();
+          setUser(currentUser);
+
+          // Mock personalized tasks - in a real implementation, you would fetch these from an API
+          const mockPersonalizedTasks = [
+            {
+              tag: "React + Tailwind",
+              rate: "$95",
+              title: "Dashboard UI Enhancement",
+              difficulty: "Intermediate",
+              matchPercentage: 98,
+              description:
+                "Improve an existing dashboard UI with modern components and animations...",
+            },
+            {
+              tag: "JavaScript",
+              rate: "$80",
+              title: "Performance Optimization",
+              difficulty: "Advanced",
+              matchPercentage: 92,
+              description:
+                "Optimize load times and runtime performance for a JavaScript-heavy application...",
+            },
+            {
+              tag: "React Native",
+              rate: "$110",
+              title: "Mobile App Features",
+              difficulty: "Intermediate",
+              matchPercentage: 85,
+              description:
+                "Add new features to an existing React Native application with clean architecture...",
+            },
+          ];
+
+          setPersonalizedTasks(mockPersonalizedTasks);
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+      }
+
+      // Always fetch featured tasks (both logged in and not logged in users)
+      await fetchFeaturedTasks();
+    };
+
+    checkAuthAndLoadData();
+  }, [fetchFeaturedTasks]);
 
   // Check if sections are in view
   const howItWorksInView = useInView(howItWorksRef, {
@@ -485,73 +630,183 @@ const Dashboard = () => {
             transition={{ duration: 0.6 }}
             className="flex items-center justify-between mb-8"
           >
-            <h2 className="text-3xl font-bold text-slate-50">Featured Tasks</h2>
-            <Link
-              to="/exploretask"
-              className="text-indigo-400 hover:text-indigo-300"
-            >
-              View All Tasks
-            </Link>
-          </motion.div>
-          <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            animate={featuredTasksInView ? "animate" : "initial"}
-            className="grid grid-cols-1 gap-8 md:grid-cols-3"
-          >
-            {[
-              {
-                tag: "ReactJS",
-                rate: "$75",
-                title: "Build a React Component Library",
-                description:
-                  "Create reusable component library with full documentation...",
-              },
-              {
-                tag: "Node.js",
-                rate: "$90",
-                title: "API Integration for Payment Gateway",
-                description:
-                  "Implement secure payment processing using Stripe API...",
-              },
-              // Add a third featured task
-              {
-                tag: "Vue.js",
-                rate: "$85",
-                title: "E-commerce Dashboard",
-                description:
-                  "Build a responsive admin dashboard with Vue.js and Tailwind...",
-              },
-            ].map((task, index) => (
-              <motion.div
-                key={index}
-                variants={fadeInUp}
-                className="overflow-hidden transition-shadow duration-300 border rounded-lg shadow-md bg-indigo-900/70 backdrop-blur-sm border-slate-600 hover:shadow-xl hover:shadow-indigo-900/30"
-                whileHover={{ y: -5 }}
+            <div>
+              <h2 className="text-3xl font-bold text-slate-50">
+                Featured Tasks
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Discover the latest opportunities from top companies
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={fetchFeaturedTasks}
+                disabled={isLoadingFeaturedTasks}
+                className="items-center hidden px-3 py-2 font-medium text-white transition-all duration-200 rounded-lg shadow-lg sm:inline-flex bg-slate-600 hover:bg-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="px-3 py-1 text-sm text-indigo-400 rounded-full bg-indigo-600/30">
-                      {task.tag}
-                    </span>
-                    <span className="text-yellow-500">{task.rate}</span>
+                <svg
+                  className={`w-4 h-4 mr-2 ${
+                    isLoadingFeaturedTasks ? "animate-spin" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Refresh
+              </button>
+              <button
+                onClick={handleDebugFeaturedTasksAPI}
+                className="items-center hidden px-3 py-2 font-medium text-white transition-all duration-200 bg-yellow-600 rounded-lg shadow-lg sm:inline-flex hover:bg-yellow-500"
+              >
+                🐛 Debug API
+              </button>
+              <Link
+                to="/exploretask"
+                className="text-indigo-400 hover:text-indigo-300"
+              >
+                View All Tasks
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* Loading State */}
+          {isLoadingFeaturedTasks && (
+            <div className="flex items-center justify-center py-12">
+              <div className="relative">
+                <div className="w-12 h-12 mx-auto border-4 rounded-full border-indigo-500/30 animate-spin border-t-indigo-500"></div>
+                <div
+                  className="absolute w-8 h-8 mx-auto transform -translate-x-1/2 border-4 rounded-full top-2 left-1/2 border-purple-500/30 animate-spin border-t-purple-500"
+                  style={{
+                    animationDirection: "reverse",
+                    animationDuration: "1.5s",
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {featuredTasksError && !isLoadingFeaturedTasks && (
+            <div className="py-12 text-center">
+              <div className="mb-4 text-red-400">
+                ⚠️ Failed to load featured tasks
+              </div>
+              <p className="mb-4 text-sm text-slate-400">
+                {featuredTasksError}
+              </p>
+              <button
+                onClick={fetchFeaturedTasks}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-500"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Featured Tasks Grid */}
+          {!isLoadingFeaturedTasks && !featuredTasksError && (
+            <>
+              {featuredTasks.length > 0 ? (
+                <motion.div
+                  variants={staggerContainer}
+                  initial="initial"
+                  animate={featuredTasksInView ? "animate" : "initial"}
+                  className="grid grid-cols-1 gap-8 md:grid-cols-3"
+                >
+                  {featuredTasks.map((task, index) => (
+                    <motion.div
+                      key={task.id || index}
+                      variants={fadeInUp}
+                      className="overflow-hidden transition-shadow duration-300 border rounded-lg shadow-md bg-indigo-900/70 backdrop-blur-sm border-slate-600 hover:shadow-xl hover:shadow-indigo-900/30"
+                      whileHover={{ y: -5 }}
+                    >
+                      <div className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="px-3 py-1 text-sm text-indigo-400 rounded-full bg-indigo-600/30">
+                            {task.category || task.tag || "General"}
+                          </span>
+                          <span className="text-yellow-500">
+                            ${task.payout || task.rate || 0}
+                          </span>
+                        </div>
+                        <h3 className="mb-2 text-xl font-semibold text-slate-50">
+                          {task.title}
+                        </h3>
+                        <p className="mb-4 text-slate-300">
+                          {task.description}
+                        </p>
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-sm text-slate-400">
+                            {task.company || "Unknown Company"}
+                          </span>
+                          <span className="text-sm text-slate-400">
+                            {task.difficulty || "Medium"}
+                          </span>
+                        </div>
+                        <motion.div
+                          whileHover={{ x: 5 }}
+                          className="inline-block"
+                        >
+                          <Link
+                            to={`/task-details/${task.id}`}
+                            className="flex items-center text-cyan-500 hover:text-cyan-400"
+                          >
+                            View Task <span className="ml-1">→</span>
+                          </Link>
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              ) : (
+                <div className="py-12 text-center">
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-indigo-500/20">
+                    <svg
+                      className="w-8 h-8 text-indigo-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
                   </div>
                   <h3 className="mb-2 text-xl font-semibold text-slate-50">
-                    {task.title}
+                    No Featured Tasks Available
                   </h3>
-                  <p className="mb-4 text-slate-300">{task.description}</p>
-                  <motion.div whileHover={{ x: 5 }} className="inline-block">
-                    <Link
-                      to={`/task-details/${index + 1}`}
-                      className="flex items-center text-cyan-500 hover:text-cyan-400"
+                  <p className="mb-4 text-slate-400">
+                    Check back later for new featured opportunities, or explore
+                    all available tasks.
+                  </p>
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      onClick={fetchFeaturedTasks}
+                      className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-500"
                     >
-                      View Task <span className="ml-1">→</span>
+                      Refresh Tasks
+                    </button>
+                    <Link
+                      to="/exploretask"
+                      className="px-4 py-2 text-sm font-medium text-indigo-300 border border-indigo-500 rounded-md hover:bg-indigo-800/30"
+                    >
+                      Browse All Tasks
                     </Link>
-                  </motion.div>
+                  </div>
                 </div>
-              </motion.div>
-            ))}
-          </motion.div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
