@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { Check, Search, Trash } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { adminService } from "../../api/adminService";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
@@ -6,15 +7,13 @@ import Loading from "../../components/ui/Loading";
 import Pagination from "../../components/ui/Pagination";
 
 /**
- * Premium Users Management Component
+ * Users Management Component
  *
- * Features:
- * - Modern table with hover effects and animations
- * - Advanced search and filtering
- * - Bulk actions and selection
- * - Real-time user statistics
- * - Responsive design with mobile-first approach
- * - Premium UI with gradients and glass morphism
+ * A clean, simplified users management interface aligned with backend API endpoints:
+ * - List Users: GET /api/admin/users?page=1&limit=20&search=
+ * - Get User Details: GET /api/admin/users/:id
+ * - Edit User: PUT /api/admin/users/:id
+ * - Delete User: DELETE /api/admin/users/:id
  */
 const UsersManagement = () => {
   const [users, setUsers] = useState([]);
@@ -22,18 +21,17 @@ const UsersManagement = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [bulkAction, setBulkAction] = useState("");
   const [sortField, setSortField] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [actionSuccess, setActionSuccess] = useState(null);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 20; // Matches the API limit parameter
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -43,11 +41,9 @@ const UsersManagement = () => {
       const filters = {
         ...(searchTerm && { search: searchTerm }),
         ...(roleFilter !== "all" && { role: roleFilter }),
-        ...(statusFilter !== "all" && { status: statusFilter }),
-        sort: sortField,
-        order: sortOrder,
       };
 
+      // API endpoint: GET /api/admin/users?page=1&limit=20&search=
       const response = await adminService.getUsers(
         currentPage,
         itemsPerPage,
@@ -55,23 +51,17 @@ const UsersManagement = () => {
       );
 
       // Handle different response formats from backend
-      if (response?.data?.users) {
-        // Format: { data: { users: [...], total: 100 } }
-        setUsers(response.data.users);
-        setTotalPages(Math.ceil(response.data.total / itemsPerPage));
-        setTotalUsers(response.data.total);
-      } else if (response?.users) {
-        // Format: { users: [...], total: 100 }
+      if (response?.users) {
         setUsers(response.users);
-        setTotalPages(Math.ceil(response.total / itemsPerPage));
-        setTotalUsers(response.total);
+        setTotalPages(
+          response.totalPages || Math.ceil(response.total / itemsPerPage)
+        );
+        setTotalUsers(response.total || response.users.length);
       } else if (Array.isArray(response)) {
-        // Format: [...] (direct array)
         setUsers(response);
         setTotalPages(Math.ceil(response.length / itemsPerPage));
         setTotalUsers(response.length);
       } else {
-        // No data or unknown format
         setUsers([]);
         setTotalPages(1);
         setTotalUsers(0);
@@ -82,7 +72,7 @@ const UsersManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, roleFilter, statusFilter, sortField, sortOrder]);
+  }, [currentPage, searchTerm, roleFilter]);
 
   useEffect(() => {
     fetchUsers();
@@ -119,48 +109,67 @@ const UsersManagement = () => {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
+  const confirmDeleteUser = (user) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
     try {
-      await adminService.deleteUser(userId);
+      setLoading(true);
+
+      // API endpoint: DELETE /api/admin/users/:id
+      await adminService.deleteUser(userToDelete._id || userToDelete.id);
+
       setUsers((prev) =>
-        prev.filter((user) => (user._id || user.id) !== userId)
+        prev.filter(
+          (user) =>
+            (user._id || user.id) !== (userToDelete._id || userToDelete.id)
+        )
       );
-      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
+      setSelectedUsers((prev) =>
+        prev.filter((id) => id !== (userToDelete._id || userToDelete.id))
+      );
       setTotalUsers((prev) => prev - 1);
       setShowDeleteModal(false);
       setUserToDelete(null);
+      setActionSuccess("User deleted successfully");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(`Failed to delete user: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleBulkAction = async () => {
-    if (!bulkAction || selectedUsers.length === 0) return;
+  const handleBulkDelete = async () => {
+    if (selectedUsers.length === 0) return;
 
     try {
-      switch (bulkAction) {
-        case "delete":
-          await Promise.all(
-            selectedUsers.map((userId) => adminService.deleteUser(userId))
-          );
-          setUsers((prev) =>
-            prev.filter((user) => !selectedUsers.includes(user._id || user.id))
-          );
-          setTotalUsers((prev) => prev - selectedUsers.length);
-          break;
-        case "activate":
-          // Implement bulk activate if API supports it
-          break;
-        case "deactivate":
-          // Implement bulk deactivate if API supports it
-          break;
-        default:
-          break;
-      }
+      setLoading(true);
+
+      // Perform multiple DELETE requests for each selected user
+      await Promise.all(
+        selectedUsers.map((userId) => adminService.deleteUser(userId))
+      );
+
+      setUsers((prev) =>
+        prev.filter((user) => !selectedUsers.includes(user._id || user.id))
+      );
+      setTotalUsers((prev) => prev - selectedUsers.length);
       setSelectedUsers([]);
-      setBulkAction("");
+      setActionSuccess(`${selectedUsers.length} users deleted successfully`);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(`Failed to delete users: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -170,46 +179,7 @@ const UsersManagement = () => {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
-  };
-
-  const getUserStatus = (user) => {
-    if (user.isActive === false) return "inactive";
-    if (user.isVerified === false) return "unverified";
-    return "active";
-  };
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      active: {
-        bg: "bg-green-100 dark:bg-green-900/30",
-        text: "text-green-800 dark:text-green-300",
-        dot: "bg-green-500",
-      },
-      inactive: {
-        bg: "bg-red-100 dark:bg-red-900/30",
-        text: "text-red-800 dark:text-red-300",
-        dot: "bg-red-500",
-      },
-      unverified: {
-        bg: "bg-yellow-100 dark:bg-yellow-900/30",
-        text: "text-yellow-800 dark:text-yellow-300",
-        dot: "bg-yellow-500",
-      },
-    };
-
-    const config = statusConfig[status] || statusConfig.active;
-
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`}></span>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
   };
 
   const getRoleBadge = (role) => {
@@ -228,9 +198,9 @@ const UsersManagement = () => {
 
     return (
       <span
-        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
+        className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
       >
-        {role?.charAt(0).toUpperCase() + role?.slice(1) || "User"}
+        {role}
       </span>
     );
   };
@@ -286,19 +256,7 @@ const UsersManagement = () => {
             <div className="flex-1">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <svg
-                    className="w-5 h-5 text-slate-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
+                  <Search className="w-5 h-5 text-slate-400" />
                 </div>
                 <input
                   type="text"
@@ -324,20 +282,6 @@ const UsersManagement = () => {
                 <option value="admin">Admin</option>
                 <option value="user">User</option>
               </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="px-4 py-3 transition-all border border-slate-200 dark:border-slate-600 rounded-xl bg-white/80 dark:bg-slate-700/80 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="unverified">Unverified</option>
-              </select>
             </div>
           </div>
 
@@ -353,24 +297,27 @@ const UsersManagement = () => {
                 <span className="text-sm text-slate-600 dark:text-slate-300">
                   {selectedUsers.length} user(s) selected
                 </span>
-                <select
-                  value={bulkAction}
-                  onChange={(e) => setBulkAction(e.target.value)}
-                  className="px-3 py-2 text-sm bg-white border rounded-lg border-slate-200 dark:border-slate-600 dark:bg-slate-700 text-slate-900 dark:text-white"
-                >
-                  <option value="">Bulk Actions</option>
-                  <option value="delete">Delete Selected</option>
-                  <option value="activate">Activate Selected</option>
-                  <option value="deactivate">Deactivate Selected</option>
-                </select>
                 <button
-                  onClick={handleBulkAction}
-                  disabled={!bulkAction}
-                  className="px-4 py-2 text-sm font-medium text-white transition-all bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                  onClick={handleBulkDelete}
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-white transition-all bg-red-600 rounded-lg hover:bg-red-700"
                 >
-                  Apply
+                  <Trash className="w-4 h-4 mr-1" />
+                  Delete Selected
                 </button>
               </div>
+            </motion.div>
+          )}
+
+          {/* Success Message */}
+          {actionSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="flex items-center p-4 mt-4 text-sm text-green-800 bg-green-100 rounded-lg"
+            >
+              <Check className="w-5 h-5 mr-2" />
+              {actionSuccess}
             </motion.div>
           )}
         </motion.div>
@@ -451,7 +398,7 @@ const UsersManagement = () => {
                 No users found
               </h3>
               <p className="text-slate-500 dark:text-slate-400">
-                {searchTerm || roleFilter !== "all" || statusFilter !== "all"
+                {searchTerm || roleFilter !== "all"
                   ? "Try adjusting your search criteria"
                   : "No users have been registered yet"}
               </p>
@@ -499,9 +446,6 @@ const UsersManagement = () => {
                     </th>
                     <th className="px-6 py-4 text-xs font-semibold tracking-wider text-left uppercase text-slate-700 dark:text-slate-300">
                       Role
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold tracking-wider text-left uppercase text-slate-700 dark:text-slate-300">
-                      Status
                     </th>
                     <th
                       className="px-6 py-4 text-xs font-semibold tracking-wider text-left uppercase transition-colors cursor-pointer text-slate-700 dark:text-slate-300 hover:text-blue-600"
@@ -577,9 +521,8 @@ const UsersManagement = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
                         <td className="px-6 py-4">
-                          {getStatusBadge(getUserStatus(user))}
+                          {getRoleBadge(user.role || "user")}
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
                           {formatDate(user.createdAt)}
@@ -588,25 +531,12 @@ const UsersManagement = () => {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => {
-                                setUserToDelete(user);
-                                setShowDeleteModal(true);
+                                confirmDeleteUser(user);
                               }}
                               className="p-2 text-red-600 transition-all rounded-lg opacity-0 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 group-hover:opacity-100"
                               title="Delete user"
                             >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
+                              <Trash className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -643,9 +573,7 @@ const UsersManagement = () => {
           setShowDeleteModal(false);
           setUserToDelete(null);
         }}
-        onConfirm={() =>
-          handleDeleteUser(userToDelete?._id || userToDelete?.id)
-        }
+        onConfirm={handleDeleteUser}
         title="Delete User"
         message={`Are you sure you want to delete ${
           userToDelete?.name || userToDelete?.email || "this user"

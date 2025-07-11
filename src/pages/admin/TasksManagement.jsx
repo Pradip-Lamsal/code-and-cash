@@ -1,4 +1,14 @@
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertCircle,
+  Check,
+  Edit,
+  FileText,
+  Plus,
+  Search,
+  Trash,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { adminService } from "../../api/adminService";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
@@ -6,8 +16,14 @@ import Loading from "../../components/ui/Loading";
 import Pagination from "../../components/ui/Pagination";
 
 /**
- * Tasks Management Component - Clean and Simple
- * Preserves all backend integration while improving UI/UX
+ * Tasks Management Component
+ *
+ * A clean, simplified tasks management interface aligned with backend API endpoints:
+ * - List Tasks: GET /api/admin/tasks?page=1&limit=20&filter=
+ * - Get Task Details: GET /api/admin/tasks/:id
+ * - Create Task: POST /api/admin/tasks
+ * - Edit Task: PUT /api/admin/tasks/:id
+ * - Delete Task: DELETE /api/admin/tasks/:id
  */
 const TasksManagement = () => {
   const [tasks, setTasks] = useState([]);
@@ -15,17 +31,19 @@ const TasksManagement = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalTasks, setTotalTasks] = useState(0);
   const [selectedTasks, setSelectedTasks] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [bulkAction, setBulkAction] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [currentTask, setCurrentTask] = useState(null);
+  const [actionSuccess, setActionSuccess] = useState(null);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 20; // Matches the API limit parameter
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -35,10 +53,10 @@ const TasksManagement = () => {
       const filters = {
         ...(searchTerm && { search: searchTerm }),
         ...(statusFilter !== "all" && { status: statusFilter }),
-        ...(difficultyFilter !== "all" && { difficulty: difficultyFilter }),
         ...(categoryFilter !== "all" && { category: categoryFilter }),
       };
 
+      // API endpoint: GET /api/admin/tasks?page=1&limit=20&filter=
       const response = await adminService.getTasks(
         currentPage,
         itemsPerPage,
@@ -46,22 +64,20 @@ const TasksManagement = () => {
       );
 
       // Handle different response formats from backend
-      if (response?.data?.tasks) {
-        // Format: { data: { tasks: [...], total: 100 } }
-        setTasks(response.data.tasks);
-        setTotalPages(Math.ceil(response.data.total / itemsPerPage));
-      } else if (response?.tasks) {
-        // Format: { tasks: [...], total: 100 }
+      if (response?.tasks) {
         setTasks(response.tasks);
-        setTotalPages(Math.ceil(response.total / itemsPerPage));
+        setTotalPages(
+          response.totalPages || Math.ceil(response.total / itemsPerPage)
+        );
+        setTotalTasks(response.total || response.tasks.length);
       } else if (Array.isArray(response)) {
-        // Format: [...] (direct array)
         setTasks(response);
         setTotalPages(Math.ceil(response.length / itemsPerPage));
+        setTotalTasks(response.length);
       } else {
-        // No data or unknown format
         setTasks([]);
         setTotalPages(1);
+        setTotalTasks(0);
       }
     } catch (err) {
       setError(err.message);
@@ -69,42 +85,111 @@ const TasksManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, statusFilter, difficultyFilter, categoryFilter]);
+  }, [currentPage, searchTerm, statusFilter, categoryFilter]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
-  const handleDeleteTask = async (taskId) => {
+  const confirmDeleteTask = (task) => {
+    setTaskToDelete(task);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+
     try {
-      await adminService.deleteTask(taskId);
+      setLoading(true);
+
+      // API endpoint: DELETE /api/admin/tasks/:id
+      await adminService.deleteTask(taskToDelete._id || taskToDelete.id);
+
       setTasks((prev) =>
-        prev.filter((task) => (task._id || task.id) !== taskId)
+        prev.filter(
+          (task) =>
+            (task._id || task.id) !== (taskToDelete._id || taskToDelete.id)
+        )
       );
-      setSelectedTasks((prev) => prev.filter((id) => id !== taskId));
+      setSelectedTasks((prev) =>
+        prev.filter((id) => id !== (taskToDelete._id || taskToDelete.id))
+      );
+      setTotalTasks((prev) => prev - 1);
       setShowDeleteModal(false);
       setTaskToDelete(null);
+      setActionSuccess("Task deleted successfully");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(`Failed to delete task: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleBulkAction = async () => {
-    if (!bulkAction || selectedTasks.length === 0) return;
+  const handleBulkDelete = async () => {
+    if (selectedTasks.length === 0) return;
 
     try {
-      if (bulkAction === "delete") {
-        await Promise.all(
-          selectedTasks.map((taskId) => adminService.deleteTask(taskId))
-        );
-        setTasks((prev) =>
-          prev.filter((task) => !selectedTasks.includes(task._id || task.id))
-        );
-      }
+      setLoading(true);
+
+      // Perform multiple DELETE requests for each selected task
+      await Promise.all(
+        selectedTasks.map((taskId) => adminService.deleteTask(taskId))
+      );
+
+      setTasks((prev) =>
+        prev.filter((task) => !selectedTasks.includes(task._id || task.id))
+      );
+      setTotalTasks((prev) => prev - selectedTasks.length);
       setSelectedTasks([]);
-      setBulkAction("");
+      setActionSuccess(`${selectedTasks.length} tasks deleted successfully`);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(`Failed to delete tasks: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateTask = async (newTask) => {
+    try {
+      setLoading(true);
+
+      // API endpoint: POST /api/admin/tasks
+      await adminService.createTask(newTask);
+
+      setShowCreateModal(false);
+      setActionSuccess("Task created successfully");
+      fetchTasks(); // Refresh the task list
+    } catch (err) {
+      setError(`Failed to create task: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditTask = async (taskData) => {
+    try {
+      setLoading(true);
+
+      // API endpoint: PUT /api/admin/tasks/:id
+      await adminService.updateTask(
+        currentTask._id || currentTask.id,
+        taskData
+      );
+
+      setShowEditModal(false);
+      setCurrentTask(null);
+      setActionSuccess("Task updated successfully");
+      fetchTasks(); // Refresh the task list
+    } catch (err) {
+      setError(`Failed to update task: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,53 +247,497 @@ const TasksManagement = () => {
     );
   };
 
-  const getDifficultyBadge = (difficulty) => {
-    const difficultyConfig = {
-      beginner: "bg-green-500 text-white",
-      intermediate: "bg-yellow-500 text-white",
-      advanced: "bg-orange-500 text-white",
-      expert: "bg-red-500 text-white",
-    };
-
-    return (
-      <span
-        className={`px-2 py-1 text-xs rounded-full ${
-          difficultyConfig[difficulty] || difficultyConfig.beginner
-        }`}
-      >
-        {difficulty || "beginner"}
-      </span>
-    );
-  };
-
   if (loading && tasks.length === 0) {
     return <Loading />;
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Tasks Management</h1>
-          <p className="text-gray-400">Manage all platform tasks</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
-          >
-            Create Task
-          </button>
-        </div>
+      {/* Header with actions */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h1 className="text-2xl font-bold text-white">Task Management</h1>
+
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Task</span>
+        </button>
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="p-4 border border-red-500 rounded-lg bg-red-900/20">
-          <div className="flex items-center space-x-3">
+      {/* Filters and search */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Search className="w-4 h-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="pl-10 pr-4 py-2 w-full rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            placeholder="Search tasks..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+
+        <select
+          className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+        >
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+          <option value="inactive">Inactive</option>
+        </select>
+
+        <select
+          className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+        >
+          <option value="all">All Categories</option>
+          <option value="frontend">Frontend</option>
+          <option value="backend">Backend</option>
+          <option value="fullstack">Full Stack</option>
+          <option value="mobile">Mobile</option>
+          <option value="design">Design</option>
+          <option value="devops">DevOps</option>
+        </select>
+      </div>
+
+      {/* Success and error messages */}
+      <AnimatePresence>
+        {actionSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 flex items-center gap-2"
+          >
+            <Check className="w-5 h-5" />
+            <span>{actionSuccess}</span>
+          </motion.div>
+        )}
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-2"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+            <button
+              className="ml-auto text-red-400 hover:text-red-300"
+              onClick={() => setError(null)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk actions */}
+      {selectedTasks.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-lg bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
+          <div className="text-white">
+            <span className="font-medium">{selectedTasks.length}</span> tasks
+            selected
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center gap-2"
+            >
+              <Trash className="w-4 h-4" />
+              <span>Delete Selected</span>
+            </button>
+
+            <button
+              onClick={() => setSelectedTasks([])}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tasks table */}
+      <div className="relative overflow-x-auto border border-white/10 rounded-xl">
+        <table className="w-full text-left">
+          <thead className="bg-white/5">
+            <tr>
+              <th className="p-4">
+                <input
+                  type="checkbox"
+                  className="rounded bg-white/10 border-white/20 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                  checked={
+                    tasks.length > 0 && selectedTasks.length === tasks.length
+                  }
+                  onChange={toggleSelectAll}
+                />
+              </th>
+              <th className="p-4 text-sm font-medium text-gray-300">Title</th>
+              <th className="p-4 text-sm font-medium text-gray-300">
+                Category
+              </th>
+              <th className="p-4 text-sm font-medium text-gray-300">Payout</th>
+              <th className="p-4 text-sm font-medium text-gray-300">Status</th>
+              <th className="p-4 text-sm font-medium text-gray-300">Created</th>
+              <th className="p-4 text-sm font-medium text-gray-300">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tasks.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="p-8 text-center text-gray-400">
+                  {loading ? "Loading tasks..." : "No tasks found"}
+                </td>
+              </tr>
+            ) : (
+              tasks.map((task, index) => (
+                <motion.tr
+                  key={task._id || task.id || index}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="border-t border-white/5 hover:bg-white/5 transition-colors"
+                >
+                  <td className="p-4">
+                    <input
+                      type="checkbox"
+                      className="rounded bg-white/10 border-white/20 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                      checked={selectedTasks.includes(task._id || task.id)}
+                      onChange={() => toggleTaskSelection(task._id || task.id)}
+                    />
+                  </td>
+                  <td className="p-4 font-medium text-white">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-indigo-400" />
+                      <span className="truncate max-w-[200px]">
+                        {task.title}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="p-4 text-gray-300">
+                    {task.category || "Uncategorized"}
+                  </td>
+                  <td className="p-4 text-gray-300">
+                    {formatCurrency(task.payout)}
+                  </td>
+                  <td className="p-4">{getStatusBadge(task.status)}</td>
+                  <td className="p-4 text-gray-400">
+                    {formatDate(task.createdAt)}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setCurrentTask(task);
+                          setShowEditModal(true);
+                        }}
+                        className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 transition-colors"
+                        title="Edit Task"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => confirmDeleteTask(task)}
+                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                        title="Delete Task"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {tasks.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-400">
+            Showing {Math.min(itemsPerPage, tasks.length)} of {totalTasks} tasks
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <ConfirmationModal
+            title="Delete Task"
+            message={`Are you sure you want to delete the task "${taskToDelete?.title}"? This action cannot be undone.`}
+            confirmText="Delete"
+            cancelText="Cancel"
+            onConfirm={handleDeleteTask}
+            onCancel={() => {
+              setShowDeleteModal(false);
+              setTaskToDelete(null);
+            }}
+            isOpen={showDeleteModal}
+            isDanger={true}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Create Task Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <CreateTaskModal
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={handleCreateTask}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Edit Task Modal */}
+      <AnimatePresence>
+        {showEditModal && currentTask && (
+          <EditTaskModal
+            task={currentTask}
+            onClose={() => {
+              setShowEditModal(false);
+              setCurrentTask(null);
+            }}
+            onSuccess={handleEditTask}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// Advanced Create Task Modal Component
+const CreateTaskModal = ({ onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    category: "",
+    difficulty: "medium",
+    payout: "",
+    company: "",
+    deadline: "",
+    requirements: "",
+    deliverables: "",
+    status: "open",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [step, setStep] = useState(1);
+  const totalSteps = 2;
+
+  // Field validation
+  const validateField = (name, value) => {
+    if (
+      !value &&
+      ["title", "description", "category", "difficulty", "payout"].includes(
+        name
+      )
+    ) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+    }
+
+    if (name === "category" && value) {
+      const validCategories = [
+        "frontend",
+        "backend",
+        "fullstack",
+        "mobile",
+        "design",
+        "devops",
+      ];
+      if (!validCategories.includes(value)) {
+        return "Category must be one of: frontend, backend, fullstack, mobile, design, devops";
+      }
+    }
+
+    if (name === "difficulty" && value) {
+      const validDifficulties = ["easy", "medium", "hard"];
+      if (!validDifficulties.includes(value)) {
+        return "Difficulty must be one of: easy, medium, hard";
+      }
+    }
+
+    if (name === "payout" && (isNaN(value) || parseFloat(value) <= 0)) {
+      return "Payout must be a positive number";
+    }
+
+    if (name === "deadline" && value) {
+      const deadlineDate = new Date(value);
+      if (isNaN(deadlineDate.getTime())) {
+        return "Invalid date format";
+      }
+      if (deadlineDate < new Date()) {
+        return "Deadline cannot be in the past";
+      }
+    }
+
+    return null;
+  };
+
+  // Form validation
+  const validateForm = () => {
+    const errors = {};
+
+    // Required fields for all steps
+    const requiredFields = [
+      "title",
+      "description",
+      "category",
+      "difficulty",
+      "payout",
+    ];
+
+    requiredFields.forEach((field) => {
+      const error = validateField(field, formData[field]);
+      if (error) errors[field] = error;
+    });
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // Live validation
+    const error = validateField(name, value);
+    setValidationErrors((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toISOString().split("T")[0];
+  };
+
+  const handleNextStep = () => {
+    // Validate current step before proceeding
+    if (validateForm()) {
+      setStep((prev) => Math.min(prev + 1, totalSteps));
+    }
+  };
+
+  const handlePreviousStep = () => {
+    setStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      setError("Please fill in all required fields correctly");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Prepare task data according to API spec
+      const taskData = {
+        ...formData,
+        payout: parseFloat(formData.payout),
+        status: "open",
+        deadline: formData.deadline
+          ? new Date(formData.deadline).toISOString()
+          : undefined,
+      };
+
+      // API endpoint: POST /api/admin/tasks
+      await adminService.createTask(taskData);
+
+      onSuccess(taskData);
+    } catch (err) {
+      console.error("Error creating task:", err);
+      setError(err.message || "Failed to create task. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Progress indicators for form steps
+  const renderStepIndicators = () => (
+    <div className="flex justify-center mb-6">
+      {Array.from({ length: totalSteps }).map((_, idx) => (
+        <div
+          key={idx}
+          className={`w-3 h-3 mx-1 rounded-full transition-all duration-300 ${
+            idx + 1 === step
+              ? "bg-indigo-500 scale-125"
+              : idx + 1 < step
+              ? "bg-green-500"
+              : "bg-gray-600"
+          }`}
+        />
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 backdrop-blur-sm">
+      <div
+        className="relative w-full max-w-3xl p-6 mx-4 overflow-hidden rounded-xl bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl border border-gray-700"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Form Header with Step Indicators */}
+        <div className="relative mb-6 text-center">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600/20">
+              <span className="text-lg font-semibold text-indigo-400">
+                {step}/{totalSteps}
+              </span>
+            </div>
+          </div>
+
+          <h3 className="text-2xl font-bold text-transparent bg-gradient-to-r from-white to-gray-300 bg-clip-text">
+            {step === 1 ? "Create New Task" : "Task Details"}
+          </h3>
+
+          {renderStepIndicators()}
+
+          <button
+            onClick={onClose}
+            className="absolute right-0 top-0 p-1 text-gray-400 transition-colors rounded-full hover:text-white hover:bg-gray-700"
+          >
             <svg
-              className="w-5 h-5 text-red-400"
+              className="w-6 h-6"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -217,324 +746,424 @@ const TasksManagement = () => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M6 18L18 6M6 6l12 12"
               />
             </svg>
-            <div>
-              <p className="text-red-300">{error}</p>
+          </button>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 mb-6 border border-red-500/50 rounded-lg bg-red-500/10 backdrop-blur-sm"
+          >
+            <div className="flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-red-400 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div>
+                <p className="font-medium text-red-400">There was a problem</p>
+                <p className="text-sm text-red-300">{error}</p>
+              </div>
               <button
-                onClick={fetchTasks}
-                className="px-3 py-1 mt-2 text-sm text-white transition-colors bg-red-600 rounded hover:bg-red-700"
+                onClick={() => setError(null)}
+                className="ml-auto p-1 text-red-400 hover:text-red-300"
               >
-                Retry
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-300">
-              Search
-            </label>
-            <input
-              type="text"
-              placeholder="Search by title..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-300">
-              Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-300">
-              Difficulty
-            </label>
-            <select
-              value={difficultyFilter}
-              onChange={(e) => setDifficultyFilter(e.target.value)}
-              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Difficulties</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-              <option value="expert">Expert</option>
-            </select>
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-300">
-              Category
-            </label>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Categories</option>
-              <option value="web">Web Development</option>
-              <option value="mobile">Mobile Development</option>
-              <option value="backend">Backend Development</option>
-              <option value="frontend">Frontend Development</option>
-              <option value="fullstack">Full Stack</option>
-              <option value="data-science">Data Science</option>
-              <option value="ai-ml">AI/ML</option>
-            </select>
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-medium text-gray-300">
-              Actions
-            </label>
-            <button
-              onClick={fetchTasks}
-              className="w-full px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-            >
-              Apply Filters
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Bulk Actions */}
-      {selectedTasks.length > 0 && (
-        <div className="p-4 bg-gray-800 border border-gray-700 rounded-xl">
-          <div className="flex items-center justify-between">
-            <p className="text-gray-300">
-              {selectedTasks.length} task{selectedTasks.length !== 1 ? "s" : ""}{" "}
-              selected
-            </p>
-            <div className="flex items-center space-x-3">
-              <select
-                value={bulkAction}
-                onChange={(e) => setBulkAction(e.target.value)}
-                className="px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Action</option>
-                <option value="delete">Delete</option>
-              </select>
-              <button
-                onClick={handleBulkAction}
-                disabled={!bulkAction}
-                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tasks Table */}
-      <div className="overflow-hidden bg-gray-800 border border-gray-700 rounded-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedTasks.length === tasks.length && tasks.length > 0
-                    }
-                    onChange={toggleSelectAll}
-                    className="rounded"
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
                   />
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
-                  Title
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
-                  Difficulty
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
-                  Price
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
-                  Applications
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td colSpan="9" className="px-6 py-8 text-center">
-                    <div className="inline-flex items-center gap-3 text-gray-300">
-                      <div className="w-5 h-5 border-2 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-                      Loading tasks...
-                    </div>
-                  </td>
-                </tr>
-              ) : tasks.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="9"
-                    className="px-6 py-8 text-center text-gray-400"
+                </svg>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Step 1: Basic Task Information */}
+          {step === 1 && (
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-5"
+            >
+              {/* Title field */}
+              <div>
+                <label className="flex items-center gap-1 mb-2 text-sm font-medium text-gray-300">
+                  Task Title
+                  <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="Enter a descriptive title for the task"
+                  className={`w-full px-4 py-3 text-white bg-gray-800/50 border ${
+                    validationErrors.title
+                      ? "border-red-500"
+                      : "border-gray-700"
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors`}
+                />
+                {validationErrors.title && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {validationErrors.title}
+                  </p>
+                )}
+              </div>
+
+              {/* Description field */}
+              <div>
+                <label className="flex items-center gap-1 mb-2 text-sm font-medium text-gray-300">
+                  Description
+                  <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  name="description"
+                  rows="4"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="Provide a detailed description of the task requirements"
+                  className={`w-full px-4 py-3 text-white bg-gray-800/50 border ${
+                    validationErrors.description
+                      ? "border-red-500"
+                      : "border-gray-700"
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors`}
+                />
+                {validationErrors.description && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {validationErrors.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Category and Difficulty */}
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div>
+                  <label className="flex items-center gap-1 mb-2 text-sm font-medium text-gray-300">
+                    Category
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 text-white bg-gray-800/50 border ${
+                      validationErrors.category
+                        ? "border-red-500"
+                        : "border-gray-700"
+                    } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors`}
                   >
-                    No tasks found
-                  </td>
-                </tr>
+                    <option value="">Select Category</option>
+                    <option value="frontend">Frontend Development</option>
+                    <option value="backend">Backend Development</option>
+                    <option value="fullstack">Full Stack Development</option>
+                    <option value="mobile">Mobile Development</option>
+                    <option value="design">UI/UX Design</option>
+                    <option value="devops">DevOps</option>
+                  </select>
+                  {validationErrors.category && (
+                    <p className="mt-1 text-xs text-red-400">
+                      {validationErrors.category}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="flex items-center gap-1 mb-2 text-sm font-medium text-gray-300">
+                    Difficulty
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    name="difficulty"
+                    value={formData.difficulty}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Payout and Company */}
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div>
+                  <label className="flex items-center gap-1 mb-2 text-sm font-medium text-gray-300">
+                    Payout ($)
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      name="payout"
+                      min="0"
+                      step="0.01"
+                      value={formData.payout}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      className={`w-full pl-8 px-4 py-3 text-white bg-gray-800/50 border ${
+                        validationErrors.payout
+                          ? "border-red-500"
+                          : "border-gray-700"
+                      } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors`}
+                    />
+                  </div>
+                  {validationErrors.payout && (
+                    <p className="mt-1 text-xs text-red-400">
+                      {validationErrors.payout}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-300">
+                    Company
+                  </label>
+                  <input
+                    type="text"
+                    name="company"
+                    value={formData.company}
+                    onChange={handleInputChange}
+                    placeholder="Company name (optional)"
+                    className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 2: Additional Information */}
+          {step === 2 && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-5"
+            >
+              {/* Deadline */}
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">
+                  Deadline
+                </label>
+                <input
+                  type="date"
+                  name="deadline"
+                  value={formatDate(formData.deadline)}
+                  onChange={handleInputChange}
+                  min={formatDate(new Date())}
+                  className={`w-full px-4 py-3 text-white bg-gray-800/50 border ${
+                    validationErrors.deadline
+                      ? "border-red-500"
+                      : "border-gray-700"
+                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors`}
+                />
+                {validationErrors.deadline && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {validationErrors.deadline}
+                  </p>
+                )}
+              </div>
+
+              {/* Requirements */}
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">
+                  Requirements
+                </label>
+                <textarea
+                  name="requirements"
+                  rows="3"
+                  value={formData.requirements}
+                  onChange={handleInputChange}
+                  placeholder="List any specific requirements for this task"
+                  className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                />
+              </div>
+
+              {/* Deliverables */}
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">
+                  Deliverables
+                </label>
+                <textarea
+                  name="deliverables"
+                  rows="3"
+                  value={formData.deliverables}
+                  onChange={handleInputChange}
+                  placeholder="Describe what should be delivered upon completion"
+                  className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-300">
+                  Initial Status
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                >
+                  <option value="open">Open</option>
+                  <option value="draft">Draft</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Navigation and Action Buttons */}
+          <div className="flex items-center justify-between pt-6 border-t border-gray-700">
+            {step > 1 ? (
+              <button
+                type="button"
+                onClick={handlePreviousStep}
+                className="flex items-center px-4 py-2 text-white transition-all bg-gray-700 rounded-lg hover:bg-gray-600"
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Back
+              </button>
+            ) : (
+              <div></div> // Empty div to maintain layout
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-white transition-all bg-gray-700 rounded-lg hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+
+              {step < totalSteps ? (
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="flex items-center px-5 py-2 text-white transition-all bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                >
+                  Next
+                  <svg
+                    className="w-5 h-5 ml-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
               ) : (
-                <AnimatePresence>
-                  {tasks.map((task, index) => (
-                    <motion.tr
-                      key={task._id || task.id || index}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="hover:bg-gray-700/50"
-                    >
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedTasks.includes(task._id || task.id)}
-                          onChange={() =>
-                            toggleTaskSelection(task._id || task.id)
-                          }
-                          className="rounded"
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center px-5 py-2 text-white transition-all bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <>
+                      <svg
+                        className="w-5 h-5 mr-2 animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="w-5 h-5 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
                         />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium text-white">
-                            {task.title || "Untitled"}
-                          </p>
-                          <p className="max-w-xs text-sm text-gray-400 truncate">
-                            {task.description || "No description"}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {getStatusBadge(task.status)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {getDifficultyBadge(task.difficulty)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 text-xs text-white bg-blue-600 rounded-full">
-                          {task.category || "General"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-300">
-                        {formatCurrency(task.price)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-gray-300">
-                          {task.applicants?.length || 0}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-300">
-                        {formatDate(task.createdAt)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <button className="px-3 py-1 text-xs text-white bg-blue-600 rounded-full hover:bg-blue-700">
-                            View
-                          </button>
-                          <button className="px-3 py-1 text-xs text-white bg-green-600 rounded-full hover:bg-green-700">
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => {
-                              setTaskToDelete(task);
-                              setShowDeleteModal(true);
-                            }}
-                            className="px-3 py-1 text-xs text-white bg-red-600 rounded-full hover:bg-red-700"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
+                      </svg>
+                      Create Task
+                    </>
+                  )}
+                </button>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        </form>
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setTaskToDelete(null);
-        }}
-        onConfirm={() =>
-          handleDeleteTask(taskToDelete?._id || taskToDelete?.id)
-        }
-        title="Delete Task"
-        message={`Are you sure you want to delete "${
-          taskToDelete?.title || "this task"
-        }"? This action cannot be undone.`}
-        confirmText="Delete"
-        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
-      />
-
-      {/* Create Task Modal */}
-      {showCreateModal && (
-        <CreateTaskModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            fetchTasks();
-            setShowCreateModal(false);
-          }}
-        />
-      )}
     </div>
   );
 };
 
-// Simple Create Task Modal Component
-const CreateTaskModal = ({ onClose, onSuccess }) => {
+// Simple Edit Task Modal Component
+const EditTaskModal = ({ task, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    category: "",
-    difficulty: "beginner",
-    price: "",
-    requirements: "",
-    deliverables: "",
-    timeframe: "",
+    title: task.title || "",
+    description: task.description || "",
+    category: task.category || "",
+    difficulty: task.difficulty || "medium",
+    payout: task.payout || task.price || "",
+    company: task.company || "",
+    requirements: task.requirements || "",
+    deliverables: task.deliverables || "",
+    deadline: task.deadline || "",
+    status: task.status || "open",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -545,16 +1174,18 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
       setLoading(true);
       setError(null);
 
-      await adminService.createTask({
+      await adminService.updateTask(task._id || task.id, {
         ...formData,
-        price: parseFloat(formData.price),
-        status: "open",
+        payout: parseFloat(formData.payout),
       });
 
-      onSuccess();
+      onSuccess({
+        ...formData,
+        payout: parseFloat(formData.payout),
+      });
     } catch (err) {
       setError(err.message);
-      console.error("Error creating task:", err);
+      console.error("Error updating task:", err);
     } finally {
       setLoading(false);
     }
@@ -562,8 +1193,11 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-gray-800 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h3 className="mb-6 text-2xl font-bold text-white">Create New Task</h3>
+      <div
+        className="bg-gray-800 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-6 text-2xl font-bold text-white">Edit Task</h3>
 
         {error && (
           <div className="p-4 mb-6 border border-red-500 rounded-lg bg-red-900/20">
@@ -600,13 +1234,12 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
                 className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select Category</option>
-                <option value="web">Web Development</option>
-                <option value="mobile">Mobile Development</option>
-                <option value="backend">Backend Development</option>
                 <option value="frontend">Frontend Development</option>
-                <option value="fullstack">Full Stack</option>
-                <option value="data-science">Data Science</option>
-                <option value="ai-ml">AI/ML</option>
+                <option value="backend">Backend Development</option>
+                <option value="fullstack">Full Stack Development</option>
+                <option value="mobile">Mobile Development</option>
+                <option value="design">UI/UX Design</option>
+                <option value="devops">DevOps</option>
               </select>
             </div>
           </div>
@@ -623,24 +1256,23 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
                 }
                 className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="expert">Expert</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
               </select>
             </div>
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-300">
-                Price ($)
+                Payout ($)
               </label>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 required
-                value={formData.price}
+                value={formData.payout}
                 onChange={(e) =>
-                  setFormData({ ...formData, price: e.target.value })
+                  setFormData({ ...formData, payout: e.target.value })
                 }
                 className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -718,7 +1350,7 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
               disabled={loading}
               className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
             >
-              {loading ? "Creating..." : "Create Task"}
+              {loading ? "Updating..." : "Update Task"}
             </button>
           </div>
         </form>
