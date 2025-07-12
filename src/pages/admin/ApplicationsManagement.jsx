@@ -64,14 +64,23 @@ const ApplicationsManagement = () => {
         filters
       );
 
-      // Handle different response formats from backend
+      // Debug log: print the raw response and each application object
+      console.log("Applications API response:", response);
       if (response?.applications) {
+        console.log("Applications array:", response.applications);
+        response.applications.forEach((app, idx) => {
+          console.log(`Application[${idx}]:`, app);
+        });
         setApplications(response.applications);
         setTotalPages(
           response.totalPages || Math.ceil(response.total / itemsPerPage)
         );
         setTotalApplications(response.total || response.applications.length);
       } else if (Array.isArray(response)) {
+        console.log("Applications array:", response);
+        response.forEach((app, idx) => {
+          console.log(`Application[${idx}]:`, app);
+        });
         setApplications(response);
         setTotalPages(Math.ceil(response.length / itemsPerPage));
         setTotalApplications(response.length);
@@ -233,12 +242,12 @@ const ApplicationsManagement = () => {
 
   if (error) {
     return (
-      <div className="max-w-md mx-auto p-6 bg-red-900/20 border border-red-500 rounded-lg">
-        <h2 className="text-xl font-bold text-red-400 mb-2">Error</h2>
-        <p className="text-red-300 mb-4">{error}</p>
+      <div className="max-w-md p-6 mx-auto border border-red-500 rounded-lg bg-red-900/20">
+        <h2 className="mb-2 text-xl font-bold text-red-400">Error</h2>
+        <p className="mb-4 text-red-300">{error}</p>
         <button
           onClick={fetchApplications}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700"
         >
           Try Again
         </button>
@@ -249,7 +258,7 @@ const ApplicationsManagement = () => {
   return (
     <div className="space-y-6">
       {/* Header with actions */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <h1 className="text-2xl font-bold text-white">
           Application Management
         </h1>
@@ -262,14 +271,14 @@ const ApplicationsManagement = () => {
       </div>
 
       {/* Filters and search */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <Search className="w-4 h-4 text-gray-400" />
           </div>
           <input
             type="text"
-            className="pl-10 pr-4 py-2 w-full rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full py-2 pl-10 pr-4 text-white placeholder-gray-400 border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             placeholder="Search applications..."
             value={searchTerm}
             onChange={(e) => {
@@ -280,7 +289,7 @@ const ApplicationsManagement = () => {
         </div>
 
         <select
-          className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="px-4 py-2 text-white border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value);
@@ -304,7 +313,7 @@ const ApplicationsManagement = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 flex items-center gap-2"
+            className="flex items-center gap-2 p-4 text-green-400 border rounded-lg bg-green-500/10 border-green-500/20"
           >
             <Check className="w-5 h-5" />
             <span>{actionSuccess}</span>
@@ -316,7 +325,7 @@ const ApplicationsManagement = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-2"
+            className="flex items-center gap-2 p-4 text-red-400 border rounded-lg bg-red-500/10 border-red-500/20"
           >
             <AlertCircle className="w-5 h-5" />
             <span>{error}</span>
@@ -335,7 +344,7 @@ const ApplicationsManagement = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-lg bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4"
+          className="flex flex-col items-center justify-between gap-4 p-4 border rounded-lg bg-white/5 border-white/10 sm:flex-row"
         >
           <div className="text-white">
             <span className="font-medium">{selectedApplications.length}</span>{" "}
@@ -351,7 +360,7 @@ const ApplicationsManagement = () => {
                 });
                 setShowStatusModal(true);
               }}
-              className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center gap-2"
+              className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700"
             >
               <ThumbsUp className="w-4 h-4" />
               <span>Accept Selected</span>
@@ -365,7 +374,7 @@ const ApplicationsManagement = () => {
                 });
                 setShowStatusModal(true);
               }}
-              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center gap-2"
+              className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-red-600 rounded-lg hover:bg-red-700"
             >
               <ThumbsDown className="w-4 h-4" />
               <span>Reject Selected</span>
@@ -373,7 +382,7 @@ const ApplicationsManagement = () => {
 
             <button
               onClick={() => setSelectedApplications([])}
-              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="px-4 py-2 text-white transition-colors rounded-lg bg-white/10 hover:bg-white/20"
             >
               Clear Selection
             </button>
@@ -389,7 +398,7 @@ const ApplicationsManagement = () => {
               <th className="p-4">
                 <input
                   type="checkbox"
-                  className="rounded bg-white/10 border-white/20 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                  className="text-indigo-500 rounded bg-white/10 border-white/20 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
                   checked={
                     applications.length > 0 &&
                     selectedApplications.length === applications.length
@@ -424,12 +433,12 @@ const ApplicationsManagement = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
-                  className="border-t border-white/5 hover:bg-white/5 transition-colors"
+                  className="transition-colors border-t border-white/5 hover:bg-white/5"
                 >
                   <td className="p-4">
                     <input
                       type="checkbox"
-                      className="rounded bg-white/10 border-white/20 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                      className="text-indigo-500 rounded bg-white/10 border-white/20 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
                       checked={selectedApplications.includes(app._id || app.id)}
                       onChange={() =>
                         handleApplicationSelect(app._id || app.id)
@@ -437,10 +446,16 @@ const ApplicationsManagement = () => {
                     />
                   </td>
                   <td className="p-4 font-medium text-white">
-                    {app.user?.name || app.userName || "Unknown User"}
+                    {app.userId?.name ||
+                      app.user?.name ||
+                      app.userName ||
+                      "Unknown User"}
                   </td>
                   <td className="p-4 text-gray-300 max-w-[200px] truncate">
-                    {app.task?.title || app.taskTitle || "Unknown Task"}
+                    {app.taskId?.title ||
+                      app.task?.title ||
+                      app.taskTitle ||
+                      "Unknown Task"}
                   </td>
                   <td className="p-4">
                     {getStatusBadge(app.status || "pending")}
@@ -529,7 +544,7 @@ const ApplicationsManagement = () => {
                   .
                 </p>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block mb-2 text-sm font-medium text-gray-300">
                     Feedback (optional):
                   </label>
                   <textarea
@@ -540,7 +555,7 @@ const ApplicationsManagement = () => {
                         feedback: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-3 py-2 text-white placeholder-gray-500 border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Add feedback for applicants..."
                     rows={3}
                   />
@@ -588,7 +603,7 @@ const ApplicationsManagement = () => {
               </div>
 
               <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-sm text-gray-400">Applicant</h3>
@@ -650,7 +665,7 @@ const ApplicationsManagement = () => {
                                       file.id || idx
                                     )
                                   }
-                                  className="p-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg transition-colors flex items-center gap-2"
+                                  className="flex items-center gap-2 p-2 text-indigo-400 transition-colors rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20"
                                 >
                                   <Download className="w-4 h-4" />
                                   <span>{file.name || `File ${idx + 1}`}</span>
@@ -664,10 +679,10 @@ const ApplicationsManagement = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-sm text-gray-400 mb-2">
+                  <h3 className="mb-2 text-sm text-gray-400">
                     Application Message
                   </h3>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded-lg text-gray-300">
+                  <div className="p-4 text-gray-300 border rounded-lg bg-white/5 border-white/10">
                     {selectedApplication.message ||
                       selectedApplication.coverLetter ||
                       "No message provided"}
@@ -676,8 +691,8 @@ const ApplicationsManagement = () => {
 
                 {selectedApplication.feedback && (
                   <div>
-                    <h3 className="text-sm text-gray-400 mb-2">Feedback</h3>
-                    <div className="p-4 bg-white/5 border border-white/10 rounded-lg text-gray-300">
+                    <h3 className="mb-2 text-sm text-gray-400">Feedback</h3>
+                    <div className="p-4 text-gray-300 border rounded-lg bg-white/5 border-white/10">
                       {selectedApplication.feedback}
                     </div>
                   </div>
@@ -694,7 +709,7 @@ const ApplicationsManagement = () => {
                       setShowDetailsModal(false);
                       setSelectedApplication(null);
                     }}
-                    className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700"
                     disabled={selectedApplication.status === "accepted"}
                   >
                     <ThumbsUp className="w-4 h-4" />
@@ -711,7 +726,7 @@ const ApplicationsManagement = () => {
                       setShowDetailsModal(false);
                       setSelectedApplication(null);
                     }}
-                    className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-red-600 rounded-lg hover:bg-red-700"
                     disabled={selectedApplication.status === "rejected"}
                   >
                     <ThumbsDown className="w-4 h-4" />
@@ -728,7 +743,7 @@ const ApplicationsManagement = () => {
                       setShowDetailsModal(false);
                       setSelectedApplication(null);
                     }}
-                    className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors flex items-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-lg bg-amber-600 hover:bg-amber-700"
                     disabled={selectedApplication.status === "needs_revision"}
                   >
                     <ExternalLink className="w-4 h-4" />

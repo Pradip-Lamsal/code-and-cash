@@ -159,13 +159,15 @@ class EnhancedTaskAPI {
 
   /**
    * Apply for a task - Updated to match backend endpoint
+   * @param {string} taskId - The ID of the task to apply for
+   * @param {string} [message] - Optional message to include in the application
    */
-  async applyForTask(taskId, applicationData) {
+  async applyForTask(taskId, message = "") {
     // Use the correct endpoint: POST /api/applications/apply/:taskId
     const endpoint = `/api/applications/apply/${taskId}`;
     return await this.request(endpoint, {
       method: "POST",
-      body: JSON.stringify(applicationData),
+      body: JSON.stringify({ message }),
     });
   }
 

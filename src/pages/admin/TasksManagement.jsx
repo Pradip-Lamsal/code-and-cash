@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { adminService } from "../../api/adminService";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
 import Loading from "../../components/ui/Loading";
@@ -26,6 +27,7 @@ import Pagination from "../../components/ui/Pagination";
  * - Delete Task: DELETE /api/admin/tasks/:id
  */
 const TasksManagement = () => {
+  const location = useLocation();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -86,6 +88,21 @@ const TasksManagement = () => {
       setLoading(false);
     }
   }, [currentPage, searchTerm, statusFilter, categoryFilter]);
+
+  useEffect(() => {
+    // Parse URL query parameters
+    const params = new URLSearchParams(location.search);
+    const statusParam = params.get("status");
+    const categoryParam = params.get("category");
+    const searchParam = params.get("search");
+    const pageParam = params.get("page");
+
+    // Apply filters from URL if they exist
+    if (statusParam) setStatusFilter(statusParam);
+    if (categoryParam) setCategoryFilter(categoryParam);
+    if (searchParam) setSearchTerm(searchParam);
+    if (pageParam) setCurrentPage(parseInt(pageParam, 10));
+  }, [location.search]);
 
   useEffect(() => {
     fetchTasks();
@@ -211,18 +228,31 @@ const TasksManagement = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+      // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      console.warn("Invalid date format:", dateString);
+      return "Invalid Date";
+    }
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount || 0);
+    if (amount === undefined || amount === null) return "$0.00";
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(amount || 0);
+      // eslint-disable-next-line no-unused-vars
+    } catch (err) {
+      console.warn("Invalid amount format:", amount);
+      return "$0.00";
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -234,15 +264,16 @@ const TasksManagement = () => {
       cancelled: "bg-gray-500 text-white",
       open: "bg-green-500 text-white",
       in_progress: "bg-blue-500 text-white",
+      unknown: "bg-gray-600 text-white",
     };
 
     return (
       <span
         className={`px-2 py-1 text-xs rounded-full ${
-          statusConfig[status] || statusConfig.pending
+          statusConfig[status] || statusConfig.unknown
         }`}
       >
-        {status || "pending"}
+        {status || "unknown"}
       </span>
     );
   };
@@ -254,12 +285,12 @@ const TasksManagement = () => {
   return (
     <div className="space-y-6">
       {/* Header with actions */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <h1 className="text-2xl font-bold text-white">Task Management</h1>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+          className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700"
         >
           <Plus className="w-4 h-4" />
           <span>Create Task</span>
@@ -267,14 +298,14 @@ const TasksManagement = () => {
       </div>
 
       {/* Filters and search */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="relative">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <Search className="w-4 h-4 text-gray-400" />
           </div>
           <input
             type="text"
-            className="pl-10 pr-4 py-2 w-full rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full py-2 pl-10 pr-4 text-white placeholder-gray-400 border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             placeholder="Search tasks..."
             value={searchTerm}
             onChange={(e) => {
@@ -285,7 +316,7 @@ const TasksManagement = () => {
         </div>
 
         <select
-          className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="px-4 py-2 text-white border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value);
@@ -293,14 +324,15 @@ const TasksManagement = () => {
           }}
         >
           <option value="all">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="pending">Pending</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>
-          <option value="inactive">Inactive</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="draft">Draft</option>
         </select>
 
         <select
-          className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="px-4 py-2 text-white border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={categoryFilter}
           onChange={(e) => {
             setCategoryFilter(e.target.value);
@@ -324,7 +356,7 @@ const TasksManagement = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 flex items-center gap-2"
+            className="flex items-center gap-2 p-4 text-green-400 border rounded-lg bg-green-500/10 border-green-500/20"
           >
             <Check className="w-5 h-5" />
             <span>{actionSuccess}</span>
@@ -336,7 +368,7 @@ const TasksManagement = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-2"
+            className="flex items-center gap-2 p-4 text-red-400 border rounded-lg bg-red-500/10 border-red-500/20"
           >
             <AlertCircle className="w-5 h-5" />
             <span>{error}</span>
@@ -355,7 +387,7 @@ const TasksManagement = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-lg bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4"
+          className="flex flex-col items-center justify-between gap-4 p-4 border rounded-lg bg-white/5 border-white/10 sm:flex-row"
         >
           <div className="text-white">
             <span className="font-medium">{selectedTasks.length}</span> tasks
@@ -365,7 +397,7 @@ const TasksManagement = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={handleBulkDelete}
-              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center gap-2"
+              className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-red-600 rounded-lg hover:bg-red-700"
             >
               <Trash className="w-4 h-4" />
               <span>Delete Selected</span>
@@ -373,7 +405,7 @@ const TasksManagement = () => {
 
             <button
               onClick={() => setSelectedTasks([])}
-              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="px-4 py-2 text-white transition-colors rounded-lg bg-white/10 hover:bg-white/20"
             >
               Clear Selection
             </button>
@@ -389,7 +421,7 @@ const TasksManagement = () => {
               <th className="p-4">
                 <input
                   type="checkbox"
-                  className="rounded bg-white/10 border-white/20 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                  className="text-indigo-500 rounded bg-white/10 border-white/20 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
                   checked={
                     tasks.length > 0 && selectedTasks.length === tasks.length
                   }
@@ -420,12 +452,12 @@ const TasksManagement = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.05 }}
-                  className="border-t border-white/5 hover:bg-white/5 transition-colors"
+                  className="transition-colors border-t border-white/5 hover:bg-white/5"
                 >
                   <td className="p-4">
                     <input
                       type="checkbox"
-                      className="rounded bg-white/10 border-white/20 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                      className="text-indigo-500 rounded bg-white/10 border-white/20 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
                       checked={selectedTasks.includes(task._id || task.id)}
                       onChange={() => toggleTaskSelection(task._id || task.id)}
                     />
@@ -434,7 +466,7 @@ const TasksManagement = () => {
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-indigo-400" />
                       <span className="truncate max-w-[200px]">
-                        {task.title}
+                        {task.title || "Untitled Task"}
                       </span>
                     </div>
                   </td>
@@ -444,7 +476,9 @@ const TasksManagement = () => {
                   <td className="p-4 text-gray-300">
                     {formatCurrency(task.payout)}
                   </td>
-                  <td className="p-4">{getStatusBadge(task.status)}</td>
+                  <td className="p-4">
+                    {getStatusBadge(task.status || "unknown")}
+                  </td>
                   <td className="p-4 text-gray-400">
                     {formatDate(task.createdAt)}
                   </td>
@@ -713,12 +747,12 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 backdrop-blur-sm">
       <div
-        className="relative w-full max-w-3xl p-6 mx-4 overflow-hidden rounded-xl bg-gradient-to-br from-gray-900 to-gray-800 shadow-2xl border border-gray-700"
+        className="relative w-full max-w-3xl p-6 mx-4 overflow-hidden border border-gray-700 shadow-2xl rounded-xl bg-gradient-to-br from-gray-900 to-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Form Header with Step Indicators */}
         <div className="relative mb-6 text-center">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2">
+          <div className="absolute left-0 -translate-y-1/2 top-1/2">
             <div className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-600/20">
               <span className="text-lg font-semibold text-indigo-400">
                 {step}/{totalSteps}
@@ -734,7 +768,7 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
 
           <button
             onClick={onClose}
-            className="absolute right-0 top-0 p-1 text-gray-400 transition-colors rounded-full hover:text-white hover:bg-gray-700"
+            className="absolute top-0 right-0 p-1 text-gray-400 transition-colors rounded-full hover:text-white hover:bg-gray-700"
           >
             <svg
               className="w-6 h-6"
@@ -757,7 +791,7 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 mb-6 border border-red-500/50 rounded-lg bg-red-500/10 backdrop-blur-sm"
+            className="p-4 mb-6 border rounded-lg border-red-500/50 bg-red-500/10 backdrop-blur-sm"
           >
             <div className="flex items-start gap-3">
               <svg
@@ -779,7 +813,7 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
               </div>
               <button
                 onClick={() => setError(null)}
-                className="ml-auto p-1 text-red-400 hover:text-red-300"
+                className="p-1 ml-auto text-red-400 hover:text-red-300"
               >
                 <svg
                   className="w-4 h-4"
@@ -898,7 +932,7 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
                     name="difficulty"
                     value={formData.difficulty}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-3 text-white transition-colors border border-gray-700 rounded-lg bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
                     <option value="easy">Easy</option>
                     <option value="medium">Medium</option>
@@ -949,7 +983,7 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
                     value={formData.company}
                     onChange={handleInputChange}
                     placeholder="Company name (optional)"
-                    className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-3 text-white transition-colors border border-gray-700 rounded-lg bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -999,7 +1033,7 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
                   value={formData.requirements}
                   onChange={handleInputChange}
                   placeholder="List any specific requirements for this task"
-                  className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 text-white transition-colors border border-gray-700 rounded-lg bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
 
@@ -1014,7 +1048,7 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
                   value={formData.deliverables}
                   onChange={handleInputChange}
                   placeholder="Describe what should be delivered upon completion"
-                  className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 text-white transition-colors border border-gray-700 rounded-lg bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
 
@@ -1027,11 +1061,13 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 text-white bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors"
+                  className="w-full px-4 py-3 text-white transition-colors border border-gray-700 rounded-lg bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
                   <option value="open">Open</option>
                   <option value="draft">Draft</option>
-                  <option value="closed">Closed</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </motion.div>
@@ -1167,24 +1203,116 @@ const EditTaskModal = ({ task, onClose, onSuccess }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toISOString().split("T")[0];
+  };
+
+  const validateField = (name, value) => {
+    if (
+      !value &&
+      ["title", "description", "category", "difficulty", "payout"].includes(
+        name
+      )
+    ) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+    }
+
+    if (name === "category" && value) {
+      const validCategories = [
+        "frontend",
+        "backend",
+        "fullstack",
+        "mobile",
+        "design",
+        "devops",
+      ];
+      if (!validCategories.includes(value)) {
+        return "Category must be one of: frontend, backend, fullstack, mobile, design, devops";
+      }
+    }
+
+    if (name === "difficulty" && value) {
+      const validDifficulties = ["easy", "medium", "hard"];
+      if (!validDifficulties.includes(value)) {
+        return "Difficulty must be one of: easy, medium, hard";
+      }
+    }
+
+    if (name === "payout" && (isNaN(value) || parseFloat(value) <= 0)) {
+      return "Payout must be a positive number";
+    }
+
+    if (name === "deadline" && value) {
+      const deadlineDate = new Date(value);
+      if (isNaN(deadlineDate.getTime())) {
+        return "Invalid date format";
+      }
+    }
+
+    return null;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+
+    // Live validation
+    const error = validateField(name, value);
+    setValidationErrors((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const requiredFields = [
+      "title",
+      "description",
+      "category",
+      "difficulty",
+      "payout",
+    ];
+
+    requiredFields.forEach((field) => {
+      const error = validateField(field, formData[field]);
+      if (error) errors[field] = error;
+    });
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      setError("Please fill in all required fields correctly");
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      await adminService.updateTask(task._id || task.id, {
+      // Prepare task data according to API spec
+      const taskData = {
         ...formData,
         payout: parseFloat(formData.payout),
-      });
+        deadline: formData.deadline
+          ? new Date(formData.deadline).toISOString()
+          : undefined,
+      };
 
-      onSuccess({
-        ...formData,
-        payout: parseFloat(formData.payout),
-      });
+      await adminService.updateTask(task._id || task.id, taskData);
+
+      onSuccess(taskData);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Failed to update task. Please try again.");
       console.error("Error updating task:", err);
     } finally {
       setLoading(false);
@@ -1213,25 +1341,34 @@ const EditTaskModal = ({ task, onClose, onSuccess }) => {
               </label>
               <input
                 type="text"
+                name="title"
                 required
                 value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 text-white bg-gray-700 border ${
+                  validationErrors.title ? "border-red-500" : "border-gray-600"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
               />
+              {validationErrors.title && (
+                <p className="mt-1 text-xs text-red-400">
+                  {validationErrors.title}
+                </p>
+              )}
             </div>
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-300">
                 Category
               </label>
               <select
+                name="category"
                 required
                 value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
-                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 text-white bg-gray-700 border ${
+                  validationErrors.category
+                    ? "border-red-500"
+                    : "border-gray-600"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
               >
                 <option value="">Select Category</option>
                 <option value="frontend">Frontend Development</option>
@@ -1241,6 +1378,11 @@ const EditTaskModal = ({ task, onClose, onSuccess }) => {
                 <option value="design">UI/UX Design</option>
                 <option value="devops">DevOps</option>
               </select>
+              {validationErrors.category && (
+                <p className="mt-1 text-xs text-red-400">
+                  {validationErrors.category}
+                </p>
+              )}
             </div>
           </div>
 
@@ -1250,16 +1392,24 @@ const EditTaskModal = ({ task, onClose, onSuccess }) => {
                 Difficulty
               </label>
               <select
+                name="difficulty"
                 value={formData.difficulty}
-                onChange={(e) =>
-                  setFormData({ ...formData, difficulty: e.target.value })
-                }
-                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 text-white bg-gray-700 border ${
+                  validationErrors.difficulty
+                    ? "border-red-500"
+                    : "border-gray-600"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
               >
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>
               </select>
+              {validationErrors.difficulty && (
+                <p className="mt-1 text-xs text-red-400">
+                  {validationErrors.difficulty}
+                </p>
+              )}
             </div>
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-300">
@@ -1267,15 +1417,21 @@ const EditTaskModal = ({ task, onClose, onSuccess }) => {
               </label>
               <input
                 type="number"
+                name="payout"
                 min="0"
                 step="0.01"
                 required
                 value={formData.payout}
-                onChange={(e) =>
-                  setFormData({ ...formData, payout: e.target.value })
-                }
-                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 text-white bg-gray-700 border ${
+                  validationErrors.payout ? "border-red-500" : "border-gray-600"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
               />
+              {validationErrors.payout && (
+                <p className="mt-1 text-xs text-red-400">
+                  {validationErrors.payout}
+                </p>
+              )}
             </div>
           </div>
 
@@ -1284,14 +1440,58 @@ const EditTaskModal = ({ task, onClose, onSuccess }) => {
               Description
             </label>
             <textarea
+              name="description"
               required
               rows="4"
               value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 text-white bg-gray-700 border ${
+                validationErrors.description
+                  ? "border-red-500"
+                  : "border-gray-600"
+              } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
             />
+            {validationErrors.description && (
+              <p className="mt-1 text-xs text-red-400">
+                {validationErrors.description}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-300">
+                Company
+              </label>
+              <input
+                type="text"
+                name="company"
+                value={formData.company}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-300">
+                Deadline
+              </label>
+              <input
+                type="date"
+                name="deadline"
+                value={formatDate(formData.deadline)}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 text-white bg-gray-700 border ${
+                  validationErrors.deadline
+                    ? "border-red-500"
+                    : "border-gray-600"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              />
+              {validationErrors.deadline && (
+                <p className="mt-1 text-xs text-red-400">
+                  {validationErrors.deadline}
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
@@ -1299,11 +1499,10 @@ const EditTaskModal = ({ task, onClose, onSuccess }) => {
               Requirements
             </label>
             <textarea
+              name="requirements"
               rows="3"
               value={formData.requirements}
-              onChange={(e) =>
-                setFormData({ ...formData, requirements: e.target.value })
-              }
+              onChange={handleInputChange}
               className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -1313,28 +1512,30 @@ const EditTaskModal = ({ task, onClose, onSuccess }) => {
               Deliverables
             </label>
             <textarea
+              name="deliverables"
               rows="3"
               value={formData.deliverables}
-              onChange={(e) =>
-                setFormData({ ...formData, deliverables: e.target.value })
-              }
+              onChange={handleInputChange}
               className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
             <label className="block mb-2 text-sm font-medium text-gray-300">
-              Timeframe
+              Status
             </label>
-            <input
-              type="text"
-              placeholder="e.g., 1-2 weeks"
-              value={formData.timeframe}
-              onChange={(e) =>
-                setFormData({ ...formData, timeframe: e.target.value })
-              }
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleInputChange}
               className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            >
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="draft">Draft</option>
+            </select>
           </div>
 
           <div className="flex justify-end pt-4 space-x-4">

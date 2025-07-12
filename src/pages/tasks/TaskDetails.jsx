@@ -656,7 +656,7 @@ const TaskDetails = () => {
             >
               Save for Later
             </motion.button>
-            <Link to={`/applytask/${id}`}>
+            <Link to={`/applytask/${task._id || id}`}>
               <motion.button
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}

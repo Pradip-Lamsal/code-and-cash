@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getMyAppliedTasks, submitFiles } from "../../api/appliedTasksService";
 import { getCurrentUser, isLoggedIn } from "../../api/authService";
-import enhancedTaskAPI from "../../api/enhancedTaskAPI";
 import {
   ScrollReveal,
   ScrollRevealGroup,
@@ -43,7 +43,6 @@ const MyAppliedTasks = () => {
     console.log("🔒 Authentication error detected, clearing session");
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
-    enhancedTaskAPI.setToken(null); // Clear token from API instance
     navigate(ROUTES.LOGIN);
   }, [navigate]);
 
@@ -98,13 +97,12 @@ const MyAppliedTasks = () => {
         }
 
         // CRITICAL: Set token in enhanced API instance
-        enhancedTaskAPI.setToken(token);
-        console.log("✅ Token set in API instance");
+        console.log("✅ Token set in API instance and global variable");
 
         // Test token validity with a simple API call
         try {
           console.log("🧪 Testing token validity...");
-          await enhancedTaskAPI.getMyAppliedTasks({
+          await getMyAppliedTasks({
             status: "all",
             limit: 1,
             page: 1,
@@ -153,14 +151,12 @@ const MyAppliedTasks = () => {
       console.log("👤 User ID:", user?.id || user?._id || "Unknown");
 
       // Ensure token is set in API instance
-      if (token) {
-        enhancedTaskAPI.setToken(token);
-      } else {
+      if (!token) {
         throw new Error("No authentication token found");
       }
 
       // Make API call with enhanced error handling
-      const response = await enhancedTaskAPI.getMyAppliedTasks({
+      const response = await getMyAppliedTasks({
         status: "all",
         limit: 50,
         page: 1,
@@ -361,7 +357,7 @@ const MyAppliedTasks = () => {
     try {
       // Test token first
       console.log("🧪 Testing API connection...");
-      const response = await enhancedTaskAPI.getMyAppliedTasks({
+      const response = await getMyAppliedTasks({
         status: "all",
         limit: 10,
         page: 1,
@@ -523,16 +519,19 @@ const MyAppliedTasks = () => {
 
       try {
         setUploadingTaskId(applicationId);
-        const result = await enhancedTaskAPI.submitFiles(
-          applicationId,
-          fileArray
-        );
+        // Always use MongoDB ObjectId if available for file submission
+        const realApplicationId =
+          appliedTasks.find(
+            (task) =>
+              task.applicationId === applicationId ||
+              task.id === applicationId ||
+              task._id === applicationId
+          )?._id || applicationId;
+        const result = await submitFiles(realApplicationId, fileArray);
 
         const updatedTasks = appliedTasks.map((task) => {
-          if (
-            task.applicationId === applicationId ||
-            task.id === applicationId
-          ) {
+          const taskAppId = task._id || task.applicationId || task.id;
+          if (taskAppId === realApplicationId) {
             return {
               ...task,
               status: "submitted",
@@ -928,14 +927,22 @@ const MyAppliedTasks = () => {
                   {filteredTasks.map((application, index) => {
                     // Handle both old format and new API format
                     const task = application.task || application;
-                    const applicationData = application.task
-                      ? application
-                      : { id: application.id, status: application.status };
 
-                    if (!task || (!task.id && !applicationData.id)) return null;
+                    // Always use MongoDB ObjectId for all task-related actions, fallback to id for legacy/mock data
+                    const taskId = task._id || task.id;
+                    // Application ID should also prefer _id (for new backend), fallback to id
+                    const applicationId =
+                      application._id || application.id || taskId;
+                    // Compose applicationData with all relevant fields
+                    const applicationData = {
+                      ...application,
+                      id: applicationId,
+                      status: application.status,
+                    };
+                    if (!task || (!taskId && !applicationId)) return null;
 
                     return (
-                      <ScrollReveal key={applicationData.id || task.id}>
+                      <ScrollReveal key={applicationId}>
                         <motion.div
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -1035,7 +1042,7 @@ const MyAppliedTasks = () => {
                             {/* Action Buttons */}
                             <div className="flex gap-2">
                               <Link
-                                to={`/task-details/${task.id}`}
+                                to={`/task-details/${taskId}`}
                                 className="flex-1 px-3 py-2 text-sm font-medium text-center transition-all duration-200 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white"
                               >
                                 View Details
@@ -1052,26 +1059,23 @@ const MyAppliedTasks = () => {
                                         multiple
                                         onChange={(e) =>
                                           handleFileUpload(
-                                            applicationData.id || task.id,
+                                            applicationId,
                                             Array.from(e.target.files)
                                           )
                                         }
                                         className="hidden"
                                         disabled={
-                                          uploadingTaskId ===
-                                          (applicationData.id || task.id)
+                                          uploadingTaskId === applicationId
                                         }
                                       />
                                       <div
                                         className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-center ${
-                                          uploadingTaskId ===
-                                          (applicationData.id || task.id)
+                                          uploadingTaskId === applicationId
                                             ? "bg-gradient-to-r from-slate-600 to-slate-700 text-slate-400 cursor-not-allowed"
                                             : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl"
                                         }`}
                                       >
-                                        {uploadingTaskId ===
-                                        (applicationData.id || task.id)
+                                        {uploadingTaskId === applicationId
                                           ? "Uploading..."
                                           : "Submit Work"}
                                       </div>

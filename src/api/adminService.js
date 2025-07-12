@@ -427,5 +427,7 @@ const adminService = new AdminService();
 // Initialize on import
 adminService.init();
 
+// Export getTasks as a named export for frontend usage
+export const getTasks = (...args) => adminService.getTasks(...args);
 export { adminService };
 export default adminService;

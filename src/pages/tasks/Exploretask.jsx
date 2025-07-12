@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getTasks } from "../../api/taskService";
 
 // Add custom styles for better UX
 const customStyles = `
@@ -293,7 +294,7 @@ const TaskCard = ({ task, index }) => {
       </div>
 
       {/* Action button */}
-      <Link to={`/task-details/${task.id}`} className="block">
+      <Link to={`/task-details/${task._id || task.id}`} className="block">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -326,83 +327,63 @@ const Exploretask = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [maxPrice, setMaxPrice] = useState(5000);
-  const [tasks] = useState([
-    {
-      id: 1,
-      company: "TechCorp",
-      title: "Build a React Component Library",
-      description:
-        "Create a comprehensive React component library with documentation and testing",
-      difficulty: "Medium",
-      payout: 250,
-      duration: 5,
-      category: "frontend",
-    },
-    {
-      id: 2,
-      company: "DataSys",
-      title: "API Integration for Payment Gateway",
-      description:
-        "Integrate Stripe payment gateway with existing Node.js backend",
-      difficulty: "Hard",
-      payout: 300,
-      duration: 7,
-      category: "backend",
-    },
-    {
-      id: 3,
-      company: "MobileFirst",
-      title: "Bug Fix: Mobile App Checkout",
-      description: "Fix responsive design issues on the checkout page",
-      difficulty: "Easy",
-      payout: 100,
-      duration: 2,
-      category: "mobile",
-    },
-    {
-      id: 4,
-      company: "WebSolutions",
-      title: "Database Optimization",
-      description: "Optimize MongoDB queries for better performance",
-      difficulty: "Medium",
-      payout: 200,
-      duration: 4,
-      category: "backend",
-    },
-    {
-      id: 5,
-      company: "SecureAuth",
-      title: "Authentication System Implementation",
-      description: "Implement JWT authentication with refresh tokens",
-      difficulty: "Hard",
-      payout: 350,
-      duration: 6,
-      category: "backend",
-    },
-    {
-      id: 6,
-      company: "DesignCo",
-      title: "Landing Page Design",
-      description: "Create a responsive landing page using Tailwind CSS",
-      difficulty: "Easy",
-      payout: 150,
-      duration: 3,
-      category: "frontend",
-    },
-  ]);
+  const [tasks, setTasks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Fetch tasks from backend on component mount
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        // Get tasks directly from the service (no fallback logic needed)
+        const fetchedTasks = await getTasks();
+
+        console.log("📋 Fetched tasks from service:", fetchedTasks);
+
+        // Service always returns an array, so we can use it directly
+        setTasks(fetchedTasks);
+      } catch (err) {
+        console.error("❌ Error fetching tasks:", err);
+        setError("Failed to load tasks. Please try again.");
+        setTasks([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, []);
 
   // Filter logic with better performance
   const filteredTasks = tasks.filter((task) => {
+    if (!task) return false;
+
+    console.log("🔍 Filtering task:", task);
+
     const matchesCategory =
       selectedCategory === "all" || task.category === selectedCategory;
     const matchesDifficulty =
       selectedDifficulty === "all" ||
-      task.difficulty.toLowerCase() === selectedDifficulty;
+      (task.difficulty && task.difficulty.toLowerCase() === selectedDifficulty);
     const matchesSearch =
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.company.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPrice = task.payout <= maxPrice;
+      !searchQuery ||
+      (task.title &&
+        task.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (task.description &&
+        task.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (task.company &&
+        task.company.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesPrice = !task.payout || task.payout <= maxPrice;
+
+    console.log("Filter results:", {
+      matchesCategory,
+      matchesDifficulty,
+      matchesSearch,
+      matchesPrice,
+    });
 
     return (
       matchesCategory && matchesDifficulty && matchesSearch && matchesPrice
@@ -573,22 +554,55 @@ const Exploretask = () => {
           {/* Enhanced Task Grid */}
           <div className="lg:col-span-3">
             <AnimatePresence mode="wait">
-              <motion.div
-                key={`${selectedCategory}-${selectedDifficulty}-${searchQuery}-${maxPrice}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="grid grid-cols-1 gap-6 xl:grid-cols-2"
-              >
-                {filteredTasks.length > 0 ? (
-                  filteredTasks.map((task, index) => (
-                    <TaskCard key={task.id} task={task} index={index} />
-                  ))
-                ) : (
-                  <EmptyState />
-                )}
-              </motion.div>
+              {isLoading ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center justify-center py-16"
+                >
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 border-4 rounded-full border-indigo-500/30 animate-spin border-t-indigo-500"></div>
+                    <p className="text-slate-400">Loading available tasks...</p>
+                  </div>
+                </motion.div>
+              ) : error ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="py-16 text-center"
+                >
+                  <div className="mb-4 text-red-400">❌ {error}</div>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                  >
+                    Retry
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={`${selectedCategory}-${selectedDifficulty}-${searchQuery}-${maxPrice}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="grid grid-cols-1 gap-6 xl:grid-cols-2"
+                >
+                  {filteredTasks.length > 0 ? (
+                    filteredTasks.map((task, index) => (
+                      <TaskCard
+                        key={task._id || task.id}
+                        task={task}
+                        index={index}
+                      />
+                    ))
+                  ) : (
+                    <EmptyState />
+                  )}
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         </div>

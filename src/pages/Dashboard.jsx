@@ -179,14 +179,16 @@ const Dashboard = () => {
 
       console.log("✅ Featured tasks response:", response);
 
-      // Handle the response structure from backend
+      // Backend contract: tasks are always in response.data.tasks
       let tasks = [];
-      if (response?.tasks && Array.isArray(response.tasks)) {
-        tasks = response.tasks;
-      } else if (response?.data?.tasks && Array.isArray(response.data.tasks)) {
+      if (response?.data?.tasks && Array.isArray(response.data.tasks)) {
         tasks = response.data.tasks;
-      } else if (Array.isArray(response)) {
-        tasks = response;
+        console.log("✅ Tasks loaded from response.data.tasks:", tasks.length);
+      } else {
+        console.warn(
+          "⚠️ Backend response does not contain data.tasks array:",
+          response
+        );
       }
 
       // Take only first 3 tasks for featured section
@@ -258,12 +260,10 @@ const Dashboard = () => {
         response: response,
         responseType: typeof response,
         keys: response ? Object.keys(response) : null,
-        tasksCount:
-          response?.tasks?.length ||
-          response?.data?.tasks?.length ||
-          (Array.isArray(response?.data) ? response.data.length : 0) ||
-          (Array.isArray(response) ? response.length : 0) ||
-          0,
+        tasksCount: response?.data?.tasks?.length || 0,
+        hasDataTasks: !!(
+          response?.data?.tasks && Array.isArray(response.data.tasks)
+        ),
       };
 
       console.log("Debug Response:", debugInfo);

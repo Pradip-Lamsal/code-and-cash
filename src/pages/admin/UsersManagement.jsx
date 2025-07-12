@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Search, Trash } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { adminService } from "../../api/adminService";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
 import Loading from "../../components/ui/Loading";
@@ -16,6 +17,7 @@ import Pagination from "../../components/ui/Pagination";
  * - Delete User: DELETE /api/admin/users/:id
  */
 const UsersManagement = () => {
+  const location = useLocation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -73,6 +75,19 @@ const UsersManagement = () => {
       setLoading(false);
     }
   }, [currentPage, searchTerm, roleFilter]);
+
+  useEffect(() => {
+    // Parse URL query parameters
+    const params = new URLSearchParams(location.search);
+    const roleParam = params.get("role");
+    const searchParam = params.get("search");
+    const pageParam = params.get("page");
+
+    // Apply filters from URL if they exist
+    if (roleParam) setRoleFilter(roleParam);
+    if (searchParam) setSearchTerm(searchParam);
+    if (pageParam) setCurrentPage(parseInt(pageParam, 10));
+  }, [location.search]);
 
   useEffect(() => {
     fetchUsers();
@@ -503,7 +518,13 @@ const UsersManagement = () => {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="flex items-center justify-center w-10 h-10 font-semibold text-white rounded-full bg-gradient-to-br from-blue-500 to-purple-600">
-                              {(user.name || user.firstName || "U")
+                              {(
+                                user.name ||
+                                user.firstName ||
+                                user.username ||
+                                user.email ||
+                                "U"
+                              )
                                 .charAt(0)
                                 .toUpperCase()}
                             </div>
@@ -513,7 +534,9 @@ const UsersManagement = () => {
                                   `${user.firstName || ""} ${
                                     user.lastName || ""
                                   }`.trim() ||
-                                  "No Name"}
+                                  user.username ||
+                                  user.email ||
+                                  "Unknown User"}
                               </div>
                               <div className="text-sm text-slate-500 dark:text-slate-400">
                                 {user.email || "No email"}

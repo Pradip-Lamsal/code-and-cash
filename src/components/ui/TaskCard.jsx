@@ -38,7 +38,7 @@ export const TaskCard = ({
         {/* Header with title and status */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <Link to={`/task-details/${task.id}`}>
+            <Link to={`/task-details/${task._id || task.id}`}>
               <h3 className="text-lg font-semibold transition-colors text-text-primary group-hover:text-indigo line-clamp-1">
                 {task.title}
               </h3>
@@ -155,7 +155,8 @@ export const TaskCard = ({
               </button>
               <button
                 onClick={() =>
-                  onStatusChange && onStatusChange(task.id, "submitted")
+                  onStatusChange &&
+                  onStatusChange(task._id || task.id, "submitted")
                 }
                 className="flex-1 px-3 py-2 text-sm text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
               >
@@ -168,7 +169,7 @@ export const TaskCard = ({
             <div className="flex gap-2">
               <button
                 onClick={() =>
-                  onStatusChange && onStatusChange(task.id, "open")
+                  onStatusChange && onStatusChange(task._id || task.id, "open")
                 }
                 className="flex-1 px-3 py-2 text-sm transition-colors border rounded-lg text-orange-600 border-orange-600 hover:bg-orange-600 hover:text-white"
               >
@@ -185,14 +186,17 @@ export const TaskCard = ({
 
           {/* Common Actions */}
           <div className="flex gap-2">
-            <Link to={`/task-details/${task.id}`} className="flex-1">
+            <Link
+              to={`/task-details/${task._id || task.id}`}
+              className="flex-1"
+            >
               <button className="w-full px-3 py-2 text-sm transition-colors border rounded-lg text-indigo border-indigo hover:bg-indigo hover:text-white">
                 View Details
               </button>
             </Link>
 
             <button
-              onClick={() => onDelete && onDelete(task.id)}
+              onClick={() => onDelete && onDelete(task._id || task.id)}
               className="px-3 py-2 text-sm transition-colors border rounded-lg text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
               title="Delete Task"
             >
