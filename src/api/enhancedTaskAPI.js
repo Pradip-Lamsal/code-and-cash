@@ -151,10 +151,33 @@ class EnhancedTaskAPI {
 
   /**
    * Get task by ID
+   * Validates MongoDB ObjectId format before making request
    */
   async getTaskById(taskId) {
+    // Validate task ID format before making request
+    if (!taskId || !/^[0-9a-fA-F]{24}$/.test(taskId)) {
+      const error = new Error(
+        "Invalid task ID format - must be 24 hexadecimal characters"
+      );
+      error.status = 400;
+      throw error;
+    }
+
     const endpoint = `/api/tasks/${taskId}`;
-    return await this.request(endpoint, { method: "GET" });
+    try {
+      const response = await this.request(endpoint, { method: "GET" });
+      console.log("✅ Task API response received:", !!response);
+      return response;
+    } catch (error) {
+      // Enhanced error handling for task fetching
+      if (error.status === 404) {
+        error.message =
+          "Task not found - it may have been removed or doesn't exist";
+      } else if (error.status === 400) {
+        error.message = "Invalid request - please check the task ID format";
+      }
+      throw error;
+    }
   }
 
   /**

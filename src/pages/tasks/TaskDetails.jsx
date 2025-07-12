@@ -1,5 +1,8 @@
+import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { getTaskById } from "../../api/taskService";
 
 // Enhanced animation variants for consistent motion design
 const ANIMATION_VARIANTS = {
@@ -32,144 +35,21 @@ const ANIMATION_VARIANTS = {
   },
 };
 
-// Enhanced task data with better structure and more details
-const TASKS_DATABASE = {
-  1: {
-    id: 1,
-    title: "Build a React Component Library",
-    company: "TechCorp Inc.",
-    companyLogo: "TC",
-    postedDate: "2023-06-15",
-    deadline: "5 days",
-    location: "Remote",
-    estimatedTime: "20-30 hours",
-    applicants: "7 developers",
-    payout: 250,
-    difficulty: "Medium",
-    urgency: "High",
-    category: "Frontend",
-    overview:
-      "We need a comprehensive React component library that follows our design system. The components should be well-documented, accessible, and thoroughly tested.",
-    requirements: [
-      "Button (primary, secondary, outline, ghost)",
-      "Input fields (text, number, email, password)",
-      "Select dropdown",
-      "Modal/Dialog",
-      "Tabs",
-      "Card",
-      "Table",
-      "Pagination",
-      "All components must be:",
-      "Fully responsive",
-      "Accessible (WCAG 2.1 AA compliant)",
-      "Well-documented with Storybook",
-      "Thoroughly tested with Jest and React Testing Library",
-      "Use TypeScript for type safety",
-      "Implement a theming system that supports light and dark mode",
-    ],
-    deliverables: [
-      "Source code in a GitHub repository",
-      "Storybook documentation",
-      "Installation and usage instructions",
-      "Test coverage report",
-    ],
-    requiredSkills: ["React", "TypeScript", "UI/UX", "Testing"],
-    benefits: [
-      "Work with cutting-edge technology",
-      "Flexible working hours",
-      "Code review and mentorship",
-      "Portfolio addition",
-    ],
-  },
-  2: {
-    id: 2,
-    title: "API Integration for Payment Gateway",
-    company: "DataSys",
-    companyLogo: "DS",
-    postedDate: "2023-06-17",
-    deadline: "7 days",
-    location: "Remote",
-    estimatedTime: "15-25 hours",
-    applicants: "5 developers",
-    payout: 300,
-    difficulty: "Hard",
-    urgency: "Medium",
-    category: "Backend",
-    overview:
-      "We need to integrate Stripe payment gateway with our existing Node.js backend to enable secure payment processing for our e-commerce platform.",
-    requirements: [
-      "Implement Stripe API for payment processing",
-      "Handle payment intents and confirmations",
-      "Set up webhook handling for payment events",
-      "Implement proper error handling and logging",
-      "Create test suite for payment flows",
-      "Document API endpoints",
-    ],
-    deliverables: [
-      "Integration code with proper documentation",
-      "Test suite covering major payment scenarios",
-      "Security audit report",
-      "Implementation guide for frontend integration",
-    ],
-    requiredSkills: ["Node.js", "Express", "Stripe API", "Payment Processing"],
-    benefits: [
-      "Learn payment processing",
-      "Security best practices",
-      "API design experience",
-      "Financial technology exposure",
-    ],
-  },
-  3: {
-    id: 3,
-    title: "E-commerce Dashboard with Vue.js",
-    company: "ShopSmart",
-    companyLogo: "SS",
-    postedDate: "2023-06-18",
-    deadline: "10 days",
-    location: "Remote",
-    estimatedTime: "30-40 hours",
-    applicants: "3 developers",
-    payout: 400,
-    difficulty: "Medium",
-    urgency: "Low",
-    category: "Full Stack",
-    overview:
-      "Create a responsive admin dashboard for our e-commerce platform using Vue.js and Tailwind CSS with data visualization components.",
-    requirements: [
-      "Sales overview with charts and graphs",
-      "Order management interface",
-      "Customer data and analytics",
-      "Inventory management",
-      "User role management",
-      "Dark/light theme support",
-    ],
-    deliverables: [
-      "Complete Vue.js dashboard application",
-      "Component documentation",
-      "User guide for admin staff",
-    ],
-    requiredSkills: ["Vue.js", "Tailwind CSS", "Chart.js", "UX Design"],
-    benefits: [
-      "Vue.js ecosystem experience",
-      "Data visualization skills",
-      "Dashboard design patterns",
-      "E-commerce domain knowledge",
-    ],
-  },
-};
-
-//...existing code...
-
 // Helper Components for better code organization
 const DifficultyBadge = ({ difficulty }) => {
   const getDifficultyStyle = (level) => {
+    const normalizedLevel = level?.toLowerCase();
     const styles = {
-      Easy: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-      Medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-      Hard: "bg-red-500/20 text-red-400 border-red-500/30",
+      easy: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+      hard: "bg-red-500/20 text-red-400 border-red-500/30",
     };
-    return styles[level] || styles.Easy;
+    return styles[normalizedLevel] || styles.medium;
   };
+
+  const displayLevel =
+    difficulty?.charAt(0).toUpperCase() + difficulty?.slice(1).toLowerCase() ||
+    "Medium";
 
   return (
     <span
@@ -177,20 +57,25 @@ const DifficultyBadge = ({ difficulty }) => {
         difficulty
       )}`}
     >
-      {difficulty}
+      {displayLevel}
     </span>
   );
 };
 
 const UrgencyIndicator = ({ urgency }) => {
   const getUrgencyStyle = (level) => {
+    const normalizedLevel = level?.toLowerCase();
     const styles = {
-      Low: "bg-blue-500/20 text-blue-400",
-      Medium: "bg-orange-500/20 text-orange-400",
-      High: "bg-red-500/20 text-red-400",
+      low: "bg-blue-500/20 text-blue-400",
+      medium: "bg-orange-500/20 text-orange-400",
+      high: "bg-red-500/20 text-red-400",
     };
-    return styles[level] || styles.Low;
+    return styles[normalizedLevel] || styles.medium;
   };
+
+  const displayLevel =
+    urgency?.charAt(0).toUpperCase() + urgency?.slice(1).toLowerCase() ||
+    "Medium";
 
   return (
     <div
@@ -199,7 +84,7 @@ const UrgencyIndicator = ({ urgency }) => {
       )}`}
     >
       <div className="w-2 h-2 mr-2 bg-current rounded-full"></div>
-      <span className="text-sm font-medium">{urgency} Priority</span>
+      <span className="text-sm font-medium">{displayLevel} Priority</span>
     </div>
   );
 };
@@ -234,12 +119,149 @@ const SkillTag = ({ skill, index }) => (
 // Main Component
 const TaskDetails = () => {
   const { id } = useParams();
+  const [task, setTask] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Get the task data based on the id parameter
-  const task = TASKS_DATABASE[id];
+  useEffect(() => {
+    const fetchTask = async () => {
+      setLoading(true);
+      setError("");
 
-  // Enhanced Error/Not Found State
-  if (!task) {
+      try {
+        // Validate task ID format (MongoDB ObjectId is 24 hex characters)
+        if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
+          setError("Invalid task ID format");
+          console.error("❌ Invalid task ID format:", id);
+          return;
+        }
+
+        console.log("🔍 Fetching task with ID:", id);
+        const result = await getTaskById(id);
+
+        // Handle both direct and wrapped task object responses per backend guide
+        const taskObj = result?.task || result;
+
+        if (!taskObj || !taskObj._id) {
+          setError("Task not found or has been removed");
+          console.error("❌ Invalid task object received:", result);
+          return;
+        }
+
+        // Format task according to backend schema and guide
+        const formattedTask = {
+          ...taskObj,
+          // Basic required fields
+          title: taskObj.title || "Untitled Task",
+          company: taskObj.company || "Unknown Company",
+          companyLogo:
+            taskObj.companyLogo ||
+            taskObj.company?.substring(0, 2).toUpperCase() ||
+            "??",
+          category: taskObj.category || "general",
+          difficulty: taskObj.difficulty || "medium",
+          payout: typeof taskObj.payout === "number" ? taskObj.payout : 0,
+          duration: taskObj.duration || 30,
+          status: taskObj.status || "open",
+          urgency: taskObj.urgency || "medium",
+          location: taskObj.location || "Remote",
+
+          // Formatted dates
+          deadline: taskObj.deadline
+            ? format(new Date(taskObj.deadline), "PPP")
+            : "Not specified",
+          postedDate: taskObj.createdAt
+            ? format(new Date(taskObj.createdAt), "PPP")
+            : format(new Date(), "PPP"),
+
+          // Calculated fields per backend guide
+          applicants:
+            taskObj.applicantCount ||
+            (Array.isArray(taskObj.applicants) ? taskObj.applicants.length : 0),
+          estimatedTime: taskObj.duration
+            ? `${taskObj.duration} days`
+            : "Not specified",
+
+          // Arrays with fallbacks
+          requiredSkills: Array.isArray(taskObj.skills) ? taskObj.skills : [],
+          benefits: Array.isArray(taskObj.benefits)
+            ? taskObj.benefits
+            : [
+                "Work with cutting-edge technology",
+                "Flexible working hours",
+                "Portfolio addition",
+                "Professional development",
+              ],
+          requirements: Array.isArray(taskObj.requirements)
+            ? taskObj.requirements
+            : [],
+          deliverables: Array.isArray(taskObj.deliverables)
+            ? taskObj.deliverables
+            : [
+                "Complete source code",
+                "Documentation",
+                "Testing and quality assurance",
+              ],
+          tags: Array.isArray(taskObj.tags) ? taskObj.tags : [],
+
+          // Content fields
+          overview: taskObj.description || "No description available",
+
+          // System fields
+          clientId: taskObj.clientId || null,
+          assignedTo: taskObj.assignedTo || null,
+          isActive: taskObj.isActive !== undefined ? taskObj.isActive : true,
+        };
+
+        console.log(
+          "✅ Task loaded and formatted successfully:",
+          formattedTask
+        );
+        setTask(formattedTask);
+      } catch (error) {
+        console.error("❌ Error fetching task details:", error);
+
+        // Enhanced error handling based on error type
+        if (error.status === 404) {
+          setError(
+            "Task not found - it may have been removed or doesn't exist"
+          );
+        } else if (error.status === 400) {
+          setError("Invalid request - please check the task ID and try again");
+        } else if (error.message?.includes("timeout")) {
+          setError(
+            "Request timed out - please check your connection and try again"
+          );
+        } else {
+          setError(
+            error.message || "Failed to load task details. Please try again."
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchTask();
+    } else {
+      setError("No task ID provided");
+      setLoading(false);
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-navy via-navy-light to-navy">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 border-4 rounded-full border-indigo-500/30 animate-spin border-t-indigo-500"></div>
+          <p className="text-slate-400">Loading task details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !task) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-navy via-navy-light to-navy">
         <div className="max-w-4xl px-4 py-8 mx-auto sm:px-6 lg:px-8">
@@ -285,11 +307,12 @@ const TaskDetails = () => {
               </svg>
             </div>
             <h1 className="mb-4 text-3xl font-bold text-transparent bg-gradient-to-r from-indigo to-purple-600 bg-clip-text">
-              Task Not Found
+              {error || "Task Not Found"}
             </h1>
             <p className="max-w-md mx-auto mb-8 text-lg text-text-secondary">
-              The task you're looking for doesn't exist or has been removed.
-              Let's get you back to browsing amazing opportunities!
+              {error === "Invalid task ID format"
+                ? "The task ID must be a valid 24-character identifier. Please check the link and try again."
+                : "The task you're looking for doesn't exist or has been removed. Let's get you back to browsing amazing opportunities!"}
             </p>
             <Link to="/exploretask">
               <motion.button
@@ -346,32 +369,35 @@ const TaskDetails = () => {
                   className="flex items-center justify-center w-16 h-16 mr-4 shadow-lg rounded-xl bg-gradient-to-r from-indigo to-purple-600"
                 >
                   <span className="text-xl font-bold text-white">
-                    {task.companyLogo}
+                    {task.companyLogo ||
+                      task.company?.substring(0, 2).toUpperCase() ||
+                      "??"}
                   </span>
                 </motion.div>
                 <div>
                   <h1 className="mb-2 text-3xl font-bold text-transparent lg:text-4xl bg-gradient-to-r from-indigo to-purple-600 bg-clip-text">
-                    {task.title}
+                    {task.title || "Untitled Task"}
                   </h1>
                   <p className="text-lg text-text-secondary">
                     Posted by{" "}
                     <span className="font-semibold text-text-primary">
-                      {task.company}
+                      {task.company || "Unknown Company"}
                     </span>
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 mb-6">
-                <DifficultyBadge difficulty={task.difficulty} />
-                <UrgencyIndicator urgency={task.urgency} />
+                <DifficultyBadge difficulty={task.difficulty || "Unknown"} />
+                <UrgencyIndicator urgency={task.urgency || "Low"} />
                 <span className="px-3 py-1 text-sm font-medium rounded-lg bg-indigo/20 text-indigo">
-                  {task.category}
+                  {task.category?.charAt(0).toUpperCase() +
+                    task.category?.slice(1).toLowerCase() || "General"}
                 </span>
               </div>
 
               <p className="text-lg leading-relaxed text-text-secondary">
-                {task.overview}
+                {task.overview || "No overview available."}
               </p>
             </div>
 
@@ -381,9 +407,16 @@ const TaskDetails = () => {
             >
               <div className="p-6 border rounded-xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
                 <div className="mb-2 text-4xl font-bold text-transparent bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text">
-                  ${task.payout.toLocaleString()}
+                  $
+                  {typeof task.payout === "number" && task.payout > 0
+                    ? task.payout.toLocaleString()
+                    : "TBD"}
                 </div>
-                <p className="text-text-secondary">Total Payout</p>
+                <p className="text-text-secondary">
+                  {typeof task.payout === "number" && task.payout > 0
+                    ? "Total Payout"
+                    : "Payout To Be Determined"}
+                </p>
               </div>
             </motion.div>
           </div>
@@ -454,7 +487,7 @@ const TaskDetails = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      d="M17.657 16.172L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
                     />
                     <path
                       strokeLinecap="round"
@@ -484,7 +517,7 @@ const TaskDetails = () => {
                     />
                   </svg>
                 }
-                label="Estimated Time"
+                label="Duration"
                 value={task.estimatedTime}
               />
 
@@ -505,7 +538,9 @@ const TaskDetails = () => {
                   </svg>
                 }
                 label="Applicants"
-                value={task.applicants}
+                value={`${task.applicants} developer${
+                  task.applicants !== 1 ? "s" : ""
+                }`}
                 className="md:col-span-2"
               />
             </div>
@@ -520,9 +555,37 @@ const TaskDetails = () => {
               Required Skills
             </h2>
             <div className="flex flex-wrap gap-3">
-              {task.requiredSkills.map((skill, index) => (
-                <SkillTag key={skill} skill={skill} index={index} />
-              ))}
+              {task.requiredSkills.length > 0 ? (
+                task.requiredSkills.map((skill, index) => (
+                  <SkillTag key={skill} skill={skill} index={index} />
+                ))
+              ) : (
+                <p className="text-sm text-text-secondary">No skills listed.</p>
+              )}
+            </div>
+
+            {/* Tags Section */}
+            <div className="mt-8">
+              <h3 className="flex items-center mb-4 text-lg font-semibold text-text-primary">
+                <span className="mr-2">🏷️</span>
+                Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {task.tags.length > 0 ? (
+                  task.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 text-xs font-medium text-gray-400 border rounded-full bg-gray-500/20 border-gray-500/30"
+                    >
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-sm text-text-secondary">
+                    No tags available.
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Benefits Section */}
@@ -532,18 +595,24 @@ const TaskDetails = () => {
                 What You'll Gain
               </h3>
               <div className="space-y-2">
-                {task.benefits.map((benefit, index) => (
-                  <motion.div
-                    key={benefit}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    className="flex items-center text-text-secondary"
-                  >
-                    <div className="w-2 h-2 mr-3 rounded-full bg-indigo"></div>
-                    {benefit}
-                  </motion.div>
-                ))}
+                {task.benefits.length > 0 ? (
+                  task.benefits.map((benefit, index) => (
+                    <motion.div
+                      key={benefit}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + index * 0.1 }}
+                      className="flex items-center text-text-secondary"
+                    >
+                      <div className="w-2 h-2 mr-3 rounded-full bg-indigo"></div>
+                      {benefit}
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className="text-sm text-text-secondary">
+                    No benefits available.
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>
@@ -563,30 +632,38 @@ const TaskDetails = () => {
             {...ANIMATION_VARIANTS.staggerContainer}
             className="grid grid-cols-1 gap-4 md:grid-cols-2"
           >
-            {task.requirements.map((req, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="flex items-start p-4 transition-colors border rounded-lg bg-navy/50 border-border hover:border-indigo/30"
-              >
-                <svg
-                  className="w-5 h-5 mr-3 text-emerald-400 mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            {task.requirements && task.requirements.length > 0 ? (
+              task.requirements.map((req, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-start p-4 transition-colors border rounded-lg bg-navy/50 border-border hover:border-indigo/30"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span className="text-text-primary">{req}</span>
-              </motion.div>
-            ))}
+                  <svg
+                    className="w-5 h-5 mr-3 text-emerald-400 mt-0.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-text-primary">{req}</span>
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-full">
+                <p className="text-center text-text-secondary">
+                  No specific requirements listed. General qualifications apply.
+                </p>
+              </div>
+            )}
           </motion.div>
         </motion.div>
 
@@ -604,32 +681,41 @@ const TaskDetails = () => {
             {...ANIMATION_VARIANTS.staggerContainer}
             className="space-y-4"
           >
-            {task.deliverables.map((deliverable, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-start p-4 transition-colors border rounded-lg bg-gradient-to-r from-indigo/10 to-purple-600/10 border-indigo/20 hover:border-indigo/40"
-              >
-                <svg
-                  className="w-5 h-5 mr-3 text-indigo mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            {task.deliverables && task.deliverables.length > 0 ? (
+              task.deliverables.map((deliverable, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-start p-4 transition-colors border rounded-lg bg-gradient-to-r from-indigo/10 to-purple-600/10 border-indigo/20 hover:border-indigo/40"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                  />
-                </svg>
-                <span className="font-medium text-text-primary">
-                  {deliverable}
-                </span>
-              </motion.div>
-            ))}
+                  <svg
+                    className="w-5 h-5 mr-3 text-indigo mt-0.5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                  <span className="font-medium text-text-primary">
+                    {deliverable}
+                  </span>
+                </motion.div>
+              ))
+            ) : (
+              <div className="text-center">
+                <p className="text-text-secondary">
+                  Specific deliverables will be discussed during the application
+                  process.
+                </p>
+              </div>
+            )}
           </motion.div>
         </motion.div>
 
@@ -644,8 +730,11 @@ const TaskDetails = () => {
               Ready to take on this challenge?
             </h3>
             <p className="text-text-secondary">
-              Join {task.applicants} who have already applied for this exciting
-              opportunity.
+              {task.applicants > 0
+                ? `Join ${task.applicants} developer${
+                    task.applicants !== 1 ? "s" : ""
+                  } who have already applied for this exciting opportunity.`
+                : "Be the first to apply for this exciting opportunity!"}
             </p>
           </div>
           <div className="flex gap-4">
