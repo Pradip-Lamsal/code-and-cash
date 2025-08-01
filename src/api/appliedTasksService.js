@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * Applied Tasks API Service
  * Integration with backend endpoints for MyAppliedTasks functionality
@@ -139,45 +140,81 @@ class AppliedTasksAPI {
    * @returns {Promise<Object>} Upload result
    */
   async submitFiles(applicationId, files) {
-    if (!files || files.length === 0) {
-      throw new Error("No files provided");
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      throw new Error(
+        "No files provided. Please select at least one file to upload."
+      );
     }
 
-    // Validate file types
+    // Validation settings
     const allowedTypes = [
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/msword",
     ];
+    const allowedExtensions = [".pdf", ".docx", ".doc"];
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const maxFiles = 5;
+
+    if (files.length > maxFiles) {
+      throw new Error(`You can upload a maximum of ${maxFiles} files at once.`);
+    }
 
     for (const file of files) {
+      // Check MIME type
       if (!allowedTypes.includes(file.type)) {
         throw new Error(
           `Invalid file type: ${file.name}. Only PDF and DOCX files are allowed.`
         );
       }
-
-      if (file.size > 10 * 1024 * 1024) {
-        // 10MB limit
+      // Check extension (for extra safety)
+      const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+      if (!allowedExtensions.includes(ext)) {
+        throw new Error(
+          `Invalid file extension: ${file.name}. Only PDF and DOCX files are allowed.`
+        );
+      }
+      // Check size
+      if (file.size > maxFileSize) {
         throw new Error(`File too large: ${file.name}. Maximum size is 10MB.`);
       }
     }
 
     const formData = new FormData();
+    // Use "submissions" as the field name for backend compatibility
     files.forEach((file) => {
-      formData.append("files", file);
+      formData.append("submissions", file);
     });
 
-    const response = await fetch(
-      `${this.baseURL}/applications/${applicationId}/submit`,
-      {
-        method: "POST",
-        headers: this.getFileUploadHeaders(),
-        body: formData,
-      }
-    );
+    let response;
+    try {
+      response = await fetch(
+        `${this.baseURL}/applications/${applicationId}/submit`,
+        {
+          method: "POST",
+          headers: this.getFileUploadHeaders(),
+          body: formData,
+        }
+      );
+    } catch (err) {
+      throw new Error(
+        "Network error. Please check your connection and try again."
+      );
+    }
 
-    return this.handleResponse(response);
+    // Robust error handling for backend errors
+    if (!response.ok) {
+      let errorMsg = `File submission failed (HTTP ${response.status})`;
+      try {
+        const error = await response.json();
+        if (error && error.message) errorMsg = error.message;
+      } catch (_) {
+        /* empty */
+      }
+      throw new Error(errorMsg);
+    }
+
+    return response.json();
   }
 
   /**

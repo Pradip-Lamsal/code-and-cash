@@ -158,7 +158,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -170,7 +170,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
             <h2 className="text-2xl font-bold text-white">Create New Task</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 transition-colors hover:text-white"
             >
               <svg
                 className="w-6 h-6"
@@ -190,10 +190,10 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Title */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Task Title *
               </label>
               <input
@@ -213,7 +213,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Category *
               </label>
               <select
@@ -238,14 +238,14 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Difficulty */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Difficulty Level
               </label>
               <select
                 name="difficulty"
                 value={formData.difficulty}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 {difficulties.map((difficulty) => (
                   <option key={difficulty.value} value={difficulty.value}>
@@ -257,7 +257,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Price */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Price ($) *
               </label>
               <input
@@ -279,14 +279,14 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Task Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Task Type
               </label>
               <select
                 name="type"
                 value={formData.type}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
                 {taskTypes.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -298,7 +298,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Deadline */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Deadline *
               </label>
               <input
@@ -317,7 +317,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Description */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Description *
               </label>
               <textarea
@@ -339,7 +339,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Skills */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Required Skills
               </label>
               <input
@@ -347,7 +347,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
                 name="skills"
                 value={formData.skills}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-white placeholder-gray-400 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="React, Node.js, MongoDB (comma separated)"
               />
               <p className="mt-1 text-xs text-gray-400">
@@ -357,7 +357,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Requirements */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Requirements
               </label>
               <textarea
@@ -365,7 +365,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
                 value={formData.requirements}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-white placeholder-gray-400 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="List requirements (one per line)..."
               />
               <p className="mt-1 text-xs text-gray-400">
@@ -375,7 +375,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
 
             {/* Deliverables */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-300">
                 Deliverables
               </label>
               <textarea
@@ -383,7 +383,7 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
                 value={formData.deliverables}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-white placeholder-gray-400 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="List expected deliverables (one per line)..."
               />
               <p className="mt-1 text-xs text-gray-400">
@@ -393,23 +393,23 @@ export const TaskCreationForm = ({ isOpen, onClose, onTaskCreated }) => {
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-700">
+          <div className="flex justify-end pt-6 mt-8 space-x-4 border-t border-gray-700">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors disabled:opacity-50"
+              className="px-6 py-2 text-white transition-colors bg-gray-600 rounded-lg hover:bg-gray-500 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              className="px-6 py-2 text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
             >
               {loading ? (
                 <div className="flex items-center">
-                  <div className="w-4 h-4 border-b-2 border-white rounded-full animate-spin mr-2"></div>
+                  <div className="w-4 h-4 mr-2 border-b-2 border-white rounded-full animate-spin"></div>
                   Creating...
                 </div>
               ) : (
