@@ -38,18 +38,13 @@ const ANIMATION_VARIANTS = {
 // Helper Components for better code organization
 const DifficultyBadge = ({ difficulty }) => {
   const getDifficultyStyle = (level) => {
-    const normalizedLevel = level?.toLowerCase();
     const styles = {
-      easy: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-      medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-      hard: "bg-red-500/20 text-red-400 border-red-500/30",
+      Easy: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      Medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+      Hard: "bg-red-500/20 text-red-400 border-red-500/30",
     };
-    return styles[normalizedLevel] || styles.medium;
+    return styles[level] || styles.Easy;
   };
-
-  const displayLevel =
-    difficulty?.charAt(0).toUpperCase() + difficulty?.slice(1).toLowerCase() ||
-    "Medium";
 
   return (
     <span
@@ -57,25 +52,20 @@ const DifficultyBadge = ({ difficulty }) => {
         difficulty
       )}`}
     >
-      {displayLevel}
+      {difficulty}
     </span>
   );
 };
 
 const UrgencyIndicator = ({ urgency }) => {
   const getUrgencyStyle = (level) => {
-    const normalizedLevel = level?.toLowerCase();
     const styles = {
-      low: "bg-blue-500/20 text-blue-400",
-      medium: "bg-orange-500/20 text-orange-400",
-      high: "bg-red-500/20 text-red-400",
+      Low: "bg-blue-500/20 text-blue-400",
+      Medium: "bg-orange-500/20 text-orange-400",
+      High: "bg-red-500/20 text-red-400",
     };
-    return styles[normalizedLevel] || styles.medium;
+    return styles[level] || styles.Low;
   };
-
-  const displayLevel =
-    urgency?.charAt(0).toUpperCase() + urgency?.slice(1).toLowerCase() ||
-    "Medium";
 
   return (
     <div
@@ -84,7 +74,7 @@ const UrgencyIndicator = ({ urgency }) => {
       )}`}
     >
       <div className="w-2 h-2 mr-2 bg-current rounded-full"></div>
-      <span className="text-sm font-medium">{displayLevel} Priority</span>
+      <span className="text-sm font-medium">{urgency} Priority</span>
     </div>
   );
 };
@@ -117,6 +107,12 @@ const SkillTag = ({ skill, index }) => (
 );
 
 // Main Component
+// Enhanced according to Backend Task Details Guide:
+// - MongoDB ObjectId validation (24 hexadecimal characters)
+// - Proper error handling for HTTP status codes (400, 404, 500)
+// - Robust data formatting with fallbacks
+// - Company logo generation from company name
+// - Integration with file submission system via "My Submissions" link
 const TaskDetails = () => {
   const { id } = useParams();
   const [task, setTask] = useState(null);
@@ -128,61 +124,48 @@ const TaskDetails = () => {
       setLoading(true);
       setError("");
 
+      // Validate MongoDB ObjectId format (24 hexadecimal characters)
+      const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+      if (!objectIdRegex.test(id)) {
+        setError("Invalid task ID format. Please check the URL.");
+        setLoading(false);
+        return;
+      }
+
       try {
-        // Validate task ID format (MongoDB ObjectId is 24 hex characters)
-        if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
-          setError("Invalid task ID format");
-          console.error("❌ Invalid task ID format:", id);
-          return;
-        }
-
-        console.log("🔍 Fetching task with ID:", id);
         const result = await getTaskById(id);
+        console.log("🔍 Raw API response:", result);
 
-        // Handle both direct and wrapped task object responses per backend guide
+        // Handle both direct and wrapped task object responses
         const taskObj = result?.task || result;
 
         if (!taskObj || !taskObj._id) {
-          setError("Task not found or has been removed");
+          setError("Task not found or invalid task ID");
           console.error("❌ Invalid task object received:", result);
           return;
         }
 
-        // Format task according to backend schema and guide
+        // Format dates and handle missing fields according to backend schema
         const formattedTask = {
           ...taskObj,
-          // Basic required fields
           title: taskObj.title || "Untitled Task",
           company: taskObj.company || "Unknown Company",
-          companyLogo:
-            taskObj.companyLogo ||
-            taskObj.company?.substring(0, 2).toUpperCase() ||
-            "??",
-          category: taskObj.category || "general",
-          difficulty: taskObj.difficulty || "medium",
+          category: taskObj.category || "General",
+          difficulty:
+            taskObj.difficulty?.charAt(0).toUpperCase() +
+              taskObj.difficulty?.slice(1) || "Easy",
           payout: typeof taskObj.payout === "number" ? taskObj.payout : 0,
-          duration: taskObj.duration || 30,
-          status: taskObj.status || "open",
-          urgency: taskObj.urgency || "medium",
-          location: taskObj.location || "Remote",
-
-          // Formatted dates
+          duration: taskObj.duration || 1,
+          status: taskObj.status || "active",
           deadline: taskObj.deadline
             ? format(new Date(taskObj.deadline), "PPP")
-            : "Not specified",
+            : "No deadline set",
           postedDate: taskObj.createdAt
             ? format(new Date(taskObj.createdAt), "PPP")
-            : format(new Date(), "PPP"),
-
-          // Calculated fields per backend guide
-          applicants:
-            taskObj.applicantCount ||
-            (Array.isArray(taskObj.applicants) ? taskObj.applicants.length : 0),
-          estimatedTime: taskObj.duration
-            ? `${taskObj.duration} days`
-            : "Not specified",
-
-          // Arrays with fallbacks
+            : "Date unknown",
+          applicants: Array.isArray(taskObj.applicants)
+            ? taskObj.applicants.length
+            : 0,
           requiredSkills: Array.isArray(taskObj.skills) ? taskObj.skills : [],
           benefits: Array.isArray(taskObj.benefits)
             ? taskObj.benefits
@@ -202,36 +185,36 @@ const TaskDetails = () => {
                 "Documentation",
                 "Testing and quality assurance",
               ],
+          location: taskObj.location || "Remote",
+          overview: taskObj.description || "No description available.",
           tags: Array.isArray(taskObj.tags) ? taskObj.tags : [],
-
-          // Content fields
-          overview: taskObj.description || "No description available",
-
-          // System fields
+          estimatedTime: taskObj.duration
+            ? `${taskObj.duration} days`
+            : "Duration not specified",
+          urgency: taskObj.urgency || "Medium",
           clientId: taskObj.clientId || null,
           assignedTo: taskObj.assignedTo || null,
           isActive: taskObj.isActive !== undefined ? taskObj.isActive : true,
+          companyLogo:
+            taskObj.companyLogo ||
+            taskObj.company?.substring(0, 2).toUpperCase() ||
+            "??",
         };
 
-        console.log(
-          "✅ Task loaded and formatted successfully:",
-          formattedTask
-        );
+        console.log("✅ Task loaded successfully:", formattedTask);
         setTask(formattedTask);
       } catch (error) {
         console.error("❌ Error fetching task details:", error);
 
-        // Enhanced error handling based on error type
-        if (error.status === 404) {
+        // Handle specific HTTP status codes according to the guide
+        if (error.status === 400) {
+          setError("Invalid task ID format. Please check the URL.");
+        } else if (error.status === 404) {
           setError(
-            "Task not found - it may have been removed or doesn't exist"
+            "Task not found. It may have been removed or the ID is incorrect."
           );
-        } else if (error.status === 400) {
-          setError("Invalid request - please check the task ID and try again");
-        } else if (error.message?.includes("timeout")) {
-          setError(
-            "Request timed out - please check your connection and try again"
-          );
+        } else if (error.status === 500) {
+          setError("Server error. Please try again later or contact support.");
         } else {
           setError(
             error.message || "Failed to load task details. Please try again."
@@ -244,9 +227,6 @@ const TaskDetails = () => {
 
     if (id) {
       fetchTask();
-    } else {
-      setError("No task ID provided");
-      setLoading(false);
     }
   }, [id]);
 
@@ -310,9 +290,8 @@ const TaskDetails = () => {
               {error || "Task Not Found"}
             </h1>
             <p className="max-w-md mx-auto mb-8 text-lg text-text-secondary">
-              {error === "Invalid task ID format"
-                ? "The task ID must be a valid 24-character identifier. Please check the link and try again."
-                : "The task you're looking for doesn't exist or has been removed. Let's get you back to browsing amazing opportunities!"}
+              The task you're looking for doesn't exist or has been removed.
+              Let's get you back to browsing amazing opportunities!
             </p>
             <Link to="/exploretask">
               <motion.button
@@ -369,35 +348,32 @@ const TaskDetails = () => {
                   className="flex items-center justify-center w-16 h-16 mr-4 shadow-lg rounded-xl bg-gradient-to-r from-indigo to-purple-600"
                 >
                   <span className="text-xl font-bold text-white">
-                    {task.companyLogo ||
-                      task.company?.substring(0, 2).toUpperCase() ||
-                      "??"}
+                    {task.companyLogo}
                   </span>
                 </motion.div>
                 <div>
                   <h1 className="mb-2 text-3xl font-bold text-transparent lg:text-4xl bg-gradient-to-r from-indigo to-purple-600 bg-clip-text">
-                    {task.title || "Untitled Task"}
+                    {task.title}
                   </h1>
                   <p className="text-lg text-text-secondary">
                     Posted by{" "}
                     <span className="font-semibold text-text-primary">
-                      {task.company || "Unknown Company"}
+                      {task.company}
                     </span>
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 mb-6">
-                <DifficultyBadge difficulty={task.difficulty || "Unknown"} />
-                <UrgencyIndicator urgency={task.urgency || "Low"} />
+                <DifficultyBadge difficulty={task.difficulty} />
+                <UrgencyIndicator urgency={task.urgency} />
                 <span className="px-3 py-1 text-sm font-medium rounded-lg bg-indigo/20 text-indigo">
-                  {task.category?.charAt(0).toUpperCase() +
-                    task.category?.slice(1).toLowerCase() || "General"}
+                  {task.category}
                 </span>
               </div>
 
               <p className="text-lg leading-relaxed text-text-secondary">
-                {task.overview || "No overview available."}
+                {task.overview}
               </p>
             </div>
 
@@ -407,16 +383,9 @@ const TaskDetails = () => {
             >
               <div className="p-6 border rounded-xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
                 <div className="mb-2 text-4xl font-bold text-transparent bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text">
-                  $
-                  {typeof task.payout === "number" && task.payout > 0
-                    ? task.payout.toLocaleString()
-                    : "TBD"}
+                  ${task.payout ? task.payout.toLocaleString() : "0"}
                 </div>
-                <p className="text-text-secondary">
-                  {typeof task.payout === "number" && task.payout > 0
-                    ? "Total Payout"
-                    : "Payout To Be Determined"}
-                </p>
+                <p className="text-text-secondary">Total Payout</p>
               </div>
             </motion.div>
           </div>
@@ -538,9 +507,7 @@ const TaskDetails = () => {
                   </svg>
                 }
                 label="Applicants"
-                value={`${task.applicants} developer${
-                  task.applicants !== 1 ? "s" : ""
-                }`}
+                value={task.applicants}
                 className="md:col-span-2"
               />
             </div>
@@ -632,38 +599,30 @@ const TaskDetails = () => {
             {...ANIMATION_VARIANTS.staggerContainer}
             className="grid grid-cols-1 gap-4 md:grid-cols-2"
           >
-            {task.requirements && task.requirements.length > 0 ? (
-              task.requirements.map((req, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-start p-4 transition-colors border rounded-lg bg-navy/50 border-border hover:border-indigo/30"
+            {task.requirements.map((req, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="flex items-start p-4 transition-colors border rounded-lg bg-navy/50 border-border hover:border-indigo/30"
+              >
+                <svg
+                  className="w-5 h-5 mr-3 text-emerald-400 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className="w-5 h-5 mr-3 text-emerald-400 mt-0.5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span className="text-text-primary">{req}</span>
-                </motion.div>
-              ))
-            ) : (
-              <div className="col-span-full">
-                <p className="text-center text-text-secondary">
-                  No specific requirements listed. General qualifications apply.
-                </p>
-              </div>
-            )}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                <span className="text-text-primary">{req}</span>
+              </motion.div>
+            ))}
           </motion.div>
         </motion.div>
 
@@ -681,45 +640,36 @@ const TaskDetails = () => {
             {...ANIMATION_VARIANTS.staggerContainer}
             className="space-y-4"
           >
-            {task.deliverables && task.deliverables.length > 0 ? (
-              task.deliverables.map((deliverable, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-start p-4 transition-colors border rounded-lg bg-gradient-to-r from-indigo/10 to-purple-600/10 border-indigo/20 hover:border-indigo/40"
+            {task.deliverables.map((deliverable, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="flex items-start p-4 transition-colors border rounded-lg bg-gradient-to-r from-indigo/10 to-purple-600/10 border-indigo/20 hover:border-indigo/40"
+              >
+                <svg
+                  className="w-5 h-5 mr-3 text-indigo mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className="w-5 h-5 mr-3 text-indigo mt-0.5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                  <span className="font-medium text-text-primary">
-                    {deliverable}
-                  </span>
-                </motion.div>
-              ))
-            ) : (
-              <div className="text-center">
-                <p className="text-text-secondary">
-                  Specific deliverables will be discussed during the application
-                  process.
-                </p>
-              </div>
-            )}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                <span className="font-medium text-text-primary">
+                  {deliverable}
+                </span>
+              </motion.div>
+            ))}
           </motion.div>
         </motion.div>
 
-        {/* Enhanced Apply Button */}
+        {/* Enhanced Apply Button - Only show Apply for This Task */}
         <motion.div
           {...ANIMATION_VARIANTS.fadeInUp}
           transition={{ delay: 0.6 }}
@@ -730,21 +680,11 @@ const TaskDetails = () => {
               Ready to take on this challenge?
             </h3>
             <p className="text-text-secondary">
-              {task.applicants > 0
-                ? `Join ${task.applicants} developer${
-                    task.applicants !== 1 ? "s" : ""
-                  } who have already applied for this exciting opportunity.`
-                : "Be the first to apply for this exciting opportunity!"}
+              Join {task.applicants} who have already applied for this exciting
+              opportunity.
             </p>
           </div>
           <div className="flex gap-4">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="px-6 py-3 transition-colors border rounded-xl border-border text-text-secondary hover:text-text-primary hover:border-indigo/50"
-            >
-              Save for Later
-            </motion.button>
             <Link to={`/applytask/${task._id || id}`}>
               <motion.button
                 whileHover={{ scale: 1.05, y: -2 }}
