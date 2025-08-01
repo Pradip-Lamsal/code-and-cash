@@ -502,7 +502,8 @@ const MyAppliedTasks = () => {
         case "rejected":
           return task.status === "rejected";
         case "completed":
-          return task.status === "completed";
+          // Show both 'completed' and 'submitted' statuses
+          return task.status === "completed" || task.status === "submitted";
         default:
           return true;
       }
@@ -569,14 +570,18 @@ const MyAppliedTasks = () => {
   );
 
   // Get progress color based on percentage
-  const getProgressColor = (progress) => {
+  // Always show 100% progress for completed/submitted tasks
+  const getProgressColor = (progress, status) => {
+    if (status === "completed" || status === "submitted") {
+      return "from-emerald-500 to-green-500";
+    }
     if (progress >= 100) return "from-emerald-500 to-green-500";
     if (progress >= 75) return "from-blue-500 to-indigo-500";
     if (progress >= 50) return "from-yellow-500 to-orange-500";
     return "from-gray-500 to-gray-600";
   };
 
-  // Filter options based on standard backend statuses
+  // Filter options based on standard backend statuses (show both 'completed' and 'submitted' for completed tab)
   const filterOptions = [
     {
       key: "all",
@@ -608,7 +613,9 @@ const MyAppliedTasks = () => {
       key: "completed",
       label: "Completed",
       count: Array.isArray(appliedTasks)
-        ? appliedTasks.filter((t) => t && t.status === "completed").length
+        ? appliedTasks.filter(
+            (t) => t && (t.status === "completed" || t.status === "submitted")
+          ).length
         : 0,
     },
   ];
@@ -1009,9 +1016,12 @@ const MyAppliedTasks = () => {
                                     Progress
                                   </span>
                                   <span className="text-sm font-bold text-slate-50">
-                                    {applicationData.progress ||
-                                      task.progress ||
-                                      0}
+                                    {applicationData.status === "completed" ||
+                                    applicationData.status === "submitted"
+                                      ? 100
+                                      : applicationData.progress ||
+                                        task.progress ||
+                                        0}
                                     %
                                   </span>
                                 </div>
@@ -1020,9 +1030,13 @@ const MyAppliedTasks = () => {
                                     initial={{ width: 0 }}
                                     animate={{
                                       width: `${
-                                        applicationData.progress ||
-                                        task.progress ||
-                                        0
+                                        applicationData.status ===
+                                          "completed" ||
+                                        applicationData.status === "submitted"
+                                          ? 100
+                                          : applicationData.progress ||
+                                            task.progress ||
+                                            0
                                       }%`,
                                     }}
                                     transition={{
@@ -1030,9 +1044,13 @@ const MyAppliedTasks = () => {
                                       delay: index * 0.1,
                                     }}
                                     className={`h-full rounded-full bg-gradient-to-r ${getProgressColor(
-                                      applicationData.progress ||
-                                        task.progress ||
-                                        0
+                                      applicationData.status === "completed" ||
+                                        applicationData.status === "submitted"
+                                        ? 100
+                                        : applicationData.progress ||
+                                            task.progress ||
+                                            0,
+                                      applicationData.status
                                     )}`}
                                   />
                                 </div>
