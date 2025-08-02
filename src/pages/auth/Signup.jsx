@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signupAPI } from "../../api/authService.jsx";
 import AnimatedCubes from "../../components/AnimatedCubes.jsx";
@@ -17,6 +17,8 @@ const Signup = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const successTimeout = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,12 +54,14 @@ const Signup = () => {
         return;
       }
 
-      // Show success message
+      // Show success message and popup
       setSuccessMessage("Registration successful! Redirecting to login...");
+      setShowSuccess(true);
       setIsLoading(false);
 
-      // Redirect to login page after 2 seconds
-      setTimeout(() => {
+      if (successTimeout.current) clearTimeout(successTimeout.current);
+      successTimeout.current = setTimeout(() => {
+        setShowSuccess(false);
         navigate("/login");
       }, 2000);
     } catch (err) {
@@ -70,6 +74,52 @@ const Signup = () => {
   return (
     <div className="flex items-center justify-center w-full h-screen p-4 bg-indigo-950">
       <AnimatedCubes count={10} />
+
+      {/* Success Popup */}
+      {showSuccess && (
+        <div className="fixed z-50 -translate-x-1/2 top-8 left-1/2">
+          <motion.div
+            initial={{ opacity: 0, y: -30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.95 }}
+            transition={{ duration: 0.4, type: "spring", bounce: 0.4 }}
+            className="flex items-center px-6 py-4 border-2 shadow-2xl rounded-2xl bg-gradient-to-r from-green-500/90 to-emerald-600/90 border-green-400/60 backdrop-blur-lg"
+            style={{ minWidth: 320 }}
+          >
+            <svg
+              className="w-8 h-8 mr-4 text-white drop-shadow-lg"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="#22c55e"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12l2 2 4-4"
+                stroke="#fff"
+              />
+            </svg>
+            <div>
+              <div className="text-lg font-bold text-white drop-shadow">
+                Log in Successful
+              </div>
+              <div className="text-sm text-green-100">
+                Welcome! Redirecting to login...
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -199,7 +249,7 @@ const Signup = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-3 text-sm text-red-200 bg-red-500/20 border border-red-500/30 rounded-lg"
+                className="p-3 text-sm text-red-200 border rounded-lg bg-red-500/20 border-red-500/30"
               >
                 {errorMessage}
               </motion.div>
@@ -210,7 +260,7 @@ const Signup = () => {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-3 text-sm text-green-200 bg-green-500/20 border border-green-500/30 rounded-lg"
+                className="p-3 text-sm text-green-200 border rounded-lg bg-green-500/20 border-green-500/30"
               >
                 {successMessage}
               </motion.div>

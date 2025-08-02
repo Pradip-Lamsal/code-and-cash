@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginAPI } from "../../api/authService.jsx";
 import AnimatedCubes from "../../components/AnimatedCubes.jsx";
@@ -12,11 +12,24 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const successTimeout = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage(""); // Clear previous errors
     setIsLoading(true); // Show loading state
+
+    // Password validation: at least 1 capital, 1 number, 1 special character
+    // const passwordPattern =
+    //   /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).+$/;
+    // if (!passwordPattern.test(password)) {
+    //   setErrorMessage(
+    //     "Password must contain at least one capital letter, one number, and one special character."
+    //   );
+    //   setIsLoading(false);
+    //   return;
+    // }
 
     try {
       const { error, success, token } = await loginAPI({
@@ -35,11 +48,13 @@ const Login = () => {
 
       // Check if login was successful (token is returned separately)
       if (success && token) {
-        // Set a flag to show profile completion reminder on dashboard
-        localStorage.setItem("showProfileReminder", "true");
-
-        // Navigate to dashboard
-        navigate("/dashboard");
+        // Show success popup
+        setShowSuccess(true);
+        if (successTimeout.current) clearTimeout(successTimeout.current);
+        successTimeout.current = setTimeout(() => {
+          setShowSuccess(false);
+          navigate("/dashboard");
+        }, 2000);
       } else {
         setErrorMessage("Login failed. Invalid response from server.");
         setIsLoading(false);
@@ -54,6 +69,52 @@ const Login = () => {
   return (
     <div className="flex items-center justify-center w-full h-screen p-4 bg-indigo-950">
       <AnimatedCubes count={10} />
+
+      {/* Success Popup */}
+      {showSuccess && (
+        <div className="fixed z-50 -translate-x-1/2 top-8 left-1/2">
+          <motion.div
+            initial={{ opacity: 0, y: -30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.95 }}
+            transition={{ duration: 0.4, type: "spring", bounce: 0.4 }}
+            className="flex items-center px-6 py-4 border-2 shadow-2xl rounded-2xl bg-gradient-to-r from-green-500/90 to-emerald-600/90 border-green-400/60 backdrop-blur-lg"
+            style={{ minWidth: 320 }}
+          >
+            <svg
+              className="w-8 h-8 mr-4 text-white drop-shadow-lg"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="#22c55e"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12l2 2 4-4"
+                stroke="#fff"
+              />
+            </svg>
+            <div>
+              <div className="text-lg font-bold text-white drop-shadow">
+                Log in Successful
+              </div>
+              <div className="text-sm text-green-100">
+                Welcome back! Redirecting to dashboard...
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

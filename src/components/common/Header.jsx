@@ -7,6 +7,7 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showLogoutToast, setShowLogoutToast] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -48,7 +49,6 @@ const Header = () => {
           setIsAdmin(true);
         } catch (error) {
           console.warn("Admin API check failed:", error);
-          // Still keep admin = false here
         }
       }
     } catch (error) {
@@ -62,11 +62,23 @@ const Header = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setIsLoggedIn(false);
+    setIsAdmin(false);
+    setShowLogoutToast(true); // Show toast on logout
     // Stay on dashboard instead of redirecting to login
     if (location.pathname !== "/") {
       navigate("/");
     }
   };
+
+  // Toast timeout effect
+  useEffect(() => {
+    if (showLogoutToast) {
+      const timer = setTimeout(() => {
+        setShowLogoutToast(false);
+      }, 1500); // Hide toast after 1.5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [showLogoutToast]);
 
   // Close mobile menu when changing routes
   useEffect(() => {
@@ -88,6 +100,45 @@ const Header = () => {
       transition={{ duration: 0.6 }}
       className="sticky top-0 z-50 border-b shadow-md bg-indigo-950 border-slate-600 bg-opacity-95 backdrop-blur-sm"
     >
+      {/* Logout Toast */}
+      <AnimatePresence>
+        {showLogoutToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.95 }}
+            transition={{
+              type: "spring",
+              stiffness: 400,
+              damping: 30,
+              duration: 0.4,
+            }}
+            className="fixed z-[9999] top-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-indigo-900 font-bold text-lg shadow-2xl shadow-yellow-300/40 border-2 border-yellow-200 flex items-center gap-2"
+            style={{
+              minWidth: 220,
+              justifyContent: "center",
+              letterSpacing: 0.5,
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6 mr-1 text-yellow-700"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5"
+              />
+            </svg>
+            You have logged out
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo - Left Side */}

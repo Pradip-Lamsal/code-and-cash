@@ -9,7 +9,7 @@ import {
   Trash,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { adminService } from "../../api/adminService";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
@@ -44,6 +44,8 @@ const TasksManagement = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentTask, setCurrentTask] = useState(null);
   const [actionSuccess, setActionSuccess] = useState(null);
+  const [showCreateToast, setShowCreateToast] = useState(false);
+  const createToastTimeout = useRef(null);
 
   const itemsPerPage = 20; // Matches the API limit parameter
 
@@ -180,7 +182,11 @@ const TasksManagement = () => {
       await adminService.createTask(newTask);
 
       setShowCreateModal(false);
-      setActionSuccess("Task created successfully");
+      setShowCreateToast(true);
+      if (createToastTimeout.current) clearTimeout(createToastTimeout.current);
+      createToastTimeout.current = setTimeout(() => {
+        setShowCreateToast(false);
+      }, 1000);
       fetchTasks(); // Refresh the task list
     } catch (err) {
       setError(`Failed to create task: ${err.message}`);
@@ -283,291 +289,343 @@ const TasksManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-        <h1 className="text-2xl font-bold text-white">Task Management</h1>
+    <>
+      {/* Toast for Task Created */}
+      <AnimatePresence>
+        {showCreateToast && (
+          <motion.div
+            key="task-created-toast"
+            initial={{ opacity: 0, x: 40, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 40, scale: 0.95 }}
+            transition={{ duration: 0.3, type: "spring", bounce: 0.4 }}
+            className="fixed z-50 top-8 right-8 flex items-center px-6 py-4 rounded-xl shadow-2xl bg-gradient-to-r from-green-500/90 to-emerald-600/90 border-2 border-green-400/60 backdrop-blur-lg min-w-[220px]"
+          >
+            <svg
+              className="w-6 h-6 mr-3 text-white drop-shadow-lg"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="#22c55e"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12l2 2 4-4"
+                stroke="#fff"
+              />
+            </svg>
+            <div className="text-base font-semibold text-white drop-shadow">
+              Task Created
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="space-y-6">
+        {/* Header with actions */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
+          <h1 className="text-2xl font-bold text-white">Task Management</h1>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Task</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Task</span>
+          </button>
+        </div>
 
-      {/* Filters and search */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search className="w-4 h-4 text-gray-400" />
+        {/* Filters and search */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="w-4 h-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="w-full py-2 pl-10 pr-4 text-white placeholder-gray-400 border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="Search tasks..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
           </div>
-          <input
-            type="text"
-            className="w-full py-2 pl-10 pr-4 text-white placeholder-gray-400 border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="Search tasks..."
-            value={searchTerm}
+
+          <select
+            className="px-4 py-2 text-white border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            value={statusFilter}
             onChange={(e) => {
-              setSearchTerm(e.target.value);
+              setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-          />
+          >
+            <option value="all">All Statuses</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="draft">Draft</option>
+          </select>
+
+          <select
+            className="px-4 py-2 text-white border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="all">All Categories</option>
+            <option value="frontend">Frontend</option>
+            <option value="backend">Backend</option>
+            <option value="fullstack">Full Stack</option>
+            <option value="mobile">Mobile</option>
+            <option value="design">Design</option>
+            <option value="devops">DevOps</option>
+          </select>
         </div>
 
-        <select
-          className="px-4 py-2 text-white border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setCurrentPage(1);
-          }}
-        >
-          <option value="all">All Statuses</option>
-          <option value="open">Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="draft">Draft</option>
-        </select>
+        {/* Success and error messages */}
+        <AnimatePresence>
+          {actionSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-2 p-4 text-green-400 border rounded-lg bg-green-500/10 border-green-500/20"
+            >
+              <Check className="w-5 h-5" />
+              <span>{actionSuccess}</span>
+            </motion.div>
+          )}
 
-        <select
-          className="px-4 py-2 text-white border rounded-lg bg-white/5 border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          value={categoryFilter}
-          onChange={(e) => {
-            setCategoryFilter(e.target.value);
-            setCurrentPage(1);
-          }}
-        >
-          <option value="all">All Categories</option>
-          <option value="frontend">Frontend</option>
-          <option value="backend">Backend</option>
-          <option value="fullstack">Full Stack</option>
-          <option value="mobile">Mobile</option>
-          <option value="design">Design</option>
-          <option value="devops">DevOps</option>
-        </select>
-      </div>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-2 p-4 text-red-400 border rounded-lg bg-red-500/10 border-red-500/20"
+            >
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
+              <button
+                className="ml-auto text-red-400 hover:text-red-300"
+                onClick={() => setError(null)}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Success and error messages */}
-      <AnimatePresence>
-        {actionSuccess && (
+        {/* Bulk actions */}
+        {selectedTasks.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="flex items-center gap-2 p-4 text-green-400 border rounded-lg bg-green-500/10 border-green-500/20"
+            className="flex flex-col items-center justify-between gap-4 p-4 border rounded-lg bg-white/5 border-white/10 sm:flex-row"
           >
-            <Check className="w-5 h-5" />
-            <span>{actionSuccess}</span>
+            <div className="text-white">
+              <span className="font-medium">{selectedTasks.length}</span> tasks
+              selected
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                <Trash className="w-4 h-4" />
+                <span>Delete Selected</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedTasks([])}
+                className="px-4 py-2 text-white transition-colors rounded-lg bg-white/10 hover:bg-white/20"
+              >
+                Clear Selection
+              </button>
+            </div>
           </motion.div>
         )}
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="flex items-center gap-2 p-4 text-red-400 border rounded-lg bg-red-500/10 border-red-500/20"
-          >
-            <AlertCircle className="w-5 h-5" />
-            <span>{error}</span>
-            <button
-              className="ml-auto text-red-400 hover:text-red-300"
-              onClick={() => setError(null)}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Bulk actions */}
-      {selectedTasks.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-between gap-4 p-4 border rounded-lg bg-white/5 border-white/10 sm:flex-row"
-        >
-          <div className="text-white">
-            <span className="font-medium">{selectedTasks.length}</span> tasks
-            selected
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleBulkDelete}
-              className="flex items-center gap-2 px-4 py-2 text-white transition-colors bg-red-600 rounded-lg hover:bg-red-700"
-            >
-              <Trash className="w-4 h-4" />
-              <span>Delete Selected</span>
-            </button>
-
-            <button
-              onClick={() => setSelectedTasks([])}
-              className="px-4 py-2 text-white transition-colors rounded-lg bg-white/10 hover:bg-white/20"
-            >
-              Clear Selection
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Tasks table */}
-      <div className="relative overflow-x-auto border border-white/10 rounded-xl">
-        <table className="w-full text-left">
-          <thead className="bg-white/5">
-            <tr>
-              <th className="p-4">
-                <input
-                  type="checkbox"
-                  className="text-indigo-500 rounded bg-white/10 border-white/20 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
-                  checked={
-                    tasks.length > 0 && selectedTasks.length === tasks.length
-                  }
-                  onChange={toggleSelectAll}
-                />
-              </th>
-              <th className="p-4 text-sm font-medium text-gray-300">Title</th>
-              <th className="p-4 text-sm font-medium text-gray-300">
-                Category
-              </th>
-              <th className="p-4 text-sm font-medium text-gray-300">Payout</th>
-              <th className="p-4 text-sm font-medium text-gray-300">Status</th>
-              <th className="p-4 text-sm font-medium text-gray-300">Created</th>
-              <th className="p-4 text-sm font-medium text-gray-300">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.length === 0 ? (
+        {/* Tasks table */}
+        <div className="relative overflow-x-auto border border-white/10 rounded-xl">
+          <table className="w-full text-left">
+            <thead className="bg-white/5">
               <tr>
-                <td colSpan="7" className="p-8 text-center text-gray-400">
-                  {loading ? "Loading tasks..." : "No tasks found"}
-                </td>
+                <th className="p-4">
+                  <input
+                    type="checkbox"
+                    className="text-indigo-500 rounded bg-white/10 border-white/20 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                    checked={
+                      tasks.length > 0 && selectedTasks.length === tasks.length
+                    }
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className="p-4 text-sm font-medium text-gray-300">Title</th>
+                <th className="p-4 text-sm font-medium text-gray-300">
+                  Category
+                </th>
+                <th className="p-4 text-sm font-medium text-gray-300">
+                  Payout
+                </th>
+                <th className="p-4 text-sm font-medium text-gray-300">
+                  Status
+                </th>
+                <th className="p-4 text-sm font-medium text-gray-300">
+                  Created
+                </th>
+                <th className="p-4 text-sm font-medium text-gray-300">
+                  Actions
+                </th>
               </tr>
-            ) : (
-              tasks.map((task, index) => (
-                <motion.tr
-                  key={task._id || task.id || index}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="transition-colors border-t border-white/5 hover:bg-white/5"
-                >
-                  <td className="p-4">
-                    <input
-                      type="checkbox"
-                      className="text-indigo-500 rounded bg-white/10 border-white/20 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
-                      checked={selectedTasks.includes(task._id || task.id)}
-                      onChange={() => toggleTaskSelection(task._id || task.id)}
-                    />
+            </thead>
+            <tbody>
+              {tasks.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-8 text-center text-gray-400">
+                    {loading ? "Loading tasks..." : "No tasks found"}
                   </td>
-                  <td className="p-4 font-medium text-white">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-indigo-400" />
-                      <span className="truncate max-w-[200px]">
-                        {task.title || "Untitled Task"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-gray-300">
-                    {task.category || "Uncategorized"}
-                  </td>
-                  <td className="p-4 text-gray-300">
-                    {formatCurrency(task.payout)}
-                  </td>
-                  <td className="p-4">
-                    {getStatusBadge(task.status || "unknown")}
-                  </td>
-                  <td className="p-4 text-gray-400">
-                    {formatDate(task.createdAt)}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setCurrentTask(task);
-                          setShowEditModal(true);
-                        }}
-                        className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 transition-colors"
-                        title="Edit Task"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                </tr>
+              ) : (
+                tasks.map((task, index) => (
+                  <motion.tr
+                    key={task._id || task.id || index}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="transition-colors border-t border-white/5 hover:bg-white/5"
+                  >
+                    <td className="p-4">
+                      <input
+                        type="checkbox"
+                        className="text-indigo-500 rounded bg-white/10 border-white/20 focus:ring-indigo-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                        checked={selectedTasks.includes(task._id || task.id)}
+                        onChange={() =>
+                          toggleTaskSelection(task._id || task.id)
+                        }
+                      />
+                    </td>
+                    <td className="p-4 font-medium text-white">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-indigo-400" />
+                        <span className="truncate max-w-[200px]">
+                          {task.title || "Untitled Task"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-gray-300">
+                      {task.category || "Uncategorized"}
+                    </td>
+                    <td className="p-4 text-gray-300">
+                      {formatCurrency(task.payout)}
+                    </td>
+                    <td className="p-4">
+                      {getStatusBadge(task.status || "unknown")}
+                    </td>
+                    <td className="p-4 text-gray-400">
+                      {formatDate(task.createdAt)}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setCurrentTask(task);
+                            setShowEditModal(true);
+                          }}
+                          className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 transition-colors"
+                          title="Edit Task"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
 
-                      <button
-                        onClick={() => confirmDeleteTask(task)}
-                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
-                        title="Delete Task"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {tasks.length > 0 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-400">
-            Showing {Math.min(itemsPerPage, tasks.length)} of {totalTasks} tasks
-          </div>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+                        <button
+                          onClick={() => confirmDeleteTask(task)}
+                          className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                          title="Delete Task"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
 
-      {/* Delete confirmation modal */}
-      <AnimatePresence>
-        {showDeleteModal && (
-          <ConfirmationModal
-            title="Delete Task"
-            message={`Are you sure you want to delete the task "${taskToDelete?.title}"? This action cannot be undone.`}
-            confirmText="Delete"
-            cancelText="Cancel"
-            onConfirm={handleDeleteTask}
-            onCancel={() => {
-              setShowDeleteModal(false);
-              setTaskToDelete(null);
-            }}
-            isOpen={showDeleteModal}
-            isDanger={true}
-          />
+        {/* Pagination */}
+        {tasks.length > 0 && (
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-400">
+              Showing {Math.min(itemsPerPage, tasks.length)} of {totalTasks}{" "}
+              tasks
+            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
         )}
-      </AnimatePresence>
 
-      {/* Create Task Modal */}
-      <AnimatePresence>
-        {showCreateModal && (
-          <CreateTaskModal
-            onClose={() => setShowCreateModal(false)}
-            onSuccess={handleCreateTask}
-          />
-        )}
-      </AnimatePresence>
+        {/* Delete confirmation modal */}
+        <AnimatePresence>
+          {showDeleteModal && (
+            <ConfirmationModal
+              title="Delete Task"
+              message={`Are you sure you want to delete the task "${taskToDelete?.title}"? This action cannot be undone.`}
+              confirmText="Delete"
+              cancelText="Cancel"
+              onConfirm={handleDeleteTask}
+              onCancel={() => {
+                setShowDeleteModal(false);
+                setTaskToDelete(null);
+              }}
+              isOpen={showDeleteModal}
+              isDanger={true}
+            />
+          )}
+        </AnimatePresence>
 
-      {/* Edit Task Modal */}
-      <AnimatePresence>
-        {showEditModal && currentTask && (
-          <EditTaskModal
-            task={currentTask}
-            onClose={() => {
-              setShowEditModal(false);
-              setCurrentTask(null);
-            }}
-            onSuccess={handleEditTask}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+        {/* Create Task Modal */}
+        <AnimatePresence>
+          {showCreateModal && (
+            <CreateTaskModal
+              onClose={() => setShowCreateModal(false)}
+              onSuccess={handleCreateTask}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Edit Task Modal */}
+        <AnimatePresence>
+          {showEditModal && currentTask && (
+            <EditTaskModal
+              task={currentTask}
+              onClose={() => {
+                setShowEditModal(false);
+                setCurrentTask(null);
+              }}
+              onSuccess={handleEditTask}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 };
 
