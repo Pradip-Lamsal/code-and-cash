@@ -146,6 +146,8 @@ const TaskDetails = () => {
         }
 
         // Format dates and handle missing fields according to backend schema
+        // Only format as date if the value is a valid ISO string, else use as-is
+        const isValidDate = (val) => val && !isNaN(Date.parse(val));
         const formattedTask = {
           ...taskObj,
           title: taskObj.title || "Untitled Task",
@@ -157,12 +159,12 @@ const TaskDetails = () => {
           payout: typeof taskObj.payout === "number" ? taskObj.payout : 0,
           duration: taskObj.duration || 1,
           status: taskObj.status || "active",
-          deadline: taskObj.deadline
+          deadline: isValidDate(taskObj.deadline)
             ? format(new Date(taskObj.deadline), "PPP")
-            : "No deadline set",
-          postedDate: taskObj.createdAt
+            : taskObj.deadline || "No deadline set",
+          postedDate: isValidDate(taskObj.createdAt)
             ? format(new Date(taskObj.createdAt), "PPP")
-            : "Date unknown",
+            : taskObj.postedDate || taskObj.createdAt || "Date unknown",
           applicants: Array.isArray(taskObj.applicants)
             ? taskObj.applicants.length
             : 0,
