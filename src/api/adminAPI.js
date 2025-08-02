@@ -2,6 +2,15 @@
 const API_BASE_URL = "http://localhost:5001/api";
 
 class AdminAPI {
+  // Get all completed tasks/applications
+  async getCompletedTasks(page = 1, limit = 20) {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    const response = await this.request(`/admin/completed-tasks?${params}`);
+    return response.data;
+  }
   constructor() {
     this.baseURL = API_BASE_URL;
     this.token = null;

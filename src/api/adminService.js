@@ -15,6 +15,17 @@ if (token) {
  * and handles token management automatically
  */
 class AdminService {
+  /**
+   * Get completed tasks/applications for dashboard table
+   */
+  async getCompletedTasks(page = 1, limit = 20) {
+    try {
+      return await this.api.getCompletedTasks(page, limit);
+    } catch (error) {
+      console.error("Failed to fetch completed tasks:", error);
+      throw error;
+    }
+  }
   constructor() {
     this.api = adminAPI;
   }

@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { adminService } from "../../api/adminService";
 
@@ -23,46 +22,32 @@ const SubmissionsManagement = () => {
   const [taskFilter, setTaskFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedSubmissions, setSelectedSubmissions] = useState([]);
+  // Removed unused selection and bulk action state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [submissionToReview, setSubmissionToReview] = useState(null);
-  const [bulkAction, setBulkAction] = useState("");
 
   const itemsPerPage = 10;
 
+  // Fetch completed tasks with user and file info for admin
   const fetchSubmissions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const filters = {
-        ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter !== "all" && { status: statusFilter }),
-        ...(taskFilter !== "all" && { task: taskFilter }),
-      };
-
-      // Using GET /api/admin/task-applications endpoint (since submissions endpoint may not exist)
-      const data = await adminService.getTaskApplications(
+      // Use the completed-tasks endpoint for admin
+      const data = await adminService.getCompletedTasks(
         currentPage,
-        itemsPerPage,
-        filters
+        itemsPerPage
       );
 
-      // Handle different response formats from backend
-      if (data?.data?.applications) {
-        // Format: { data: { applications: [...], total: 100 } }
-        setSubmissions(data.data.applications);
-        setTotalPages(Math.ceil(data.data.total / itemsPerPage));
-      } else if (data?.applications) {
-        // Format: { applications: [...], total: 100 }
-        setSubmissions(data.applications);
-        setTotalPages(Math.ceil(data.total / itemsPerPage));
+      // Expecting: Array of completed task applications, each with user info and file submissions
+      if (data?.data) {
+        setSubmissions(data.data);
+        setTotalPages(1); // Adjust if backend supports pagination
       } else if (Array.isArray(data)) {
-        // Format: [...] (direct array)
         setSubmissions(data);
-        setTotalPages(Math.ceil(data.length / itemsPerPage));
+        setTotalPages(1);
       } else {
-        // No data or unknown format
         setSubmissions([]);
         setTotalPages(1);
       }
@@ -72,16 +57,23 @@ const SubmissionsManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, statusFilter, taskFilter, searchTerm]);
+  }, [currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchSubmissions();
   }, [fetchSubmissions]);
 
-  const handleDownloadFile = async (submissionId, _fileName) => {
+  // Download file by fileId (or filename if that's the unique identifier)
+  const handleDownloadFile = async (file) => {
     try {
-      // Using GET /api/admin/submissions/:submissionId/download endpoint
-      await adminService.downloadSubmission(submissionId);
+      // If file has a direct path/url, use it; otherwise, use the adminService
+      if (file.path) {
+        window.open(file.path, "_blank");
+      } else if (file._id) {
+        await adminService.downloadSubmission(file._id);
+      } else {
+        setError("No file path or id available for download.");
+      }
     } catch (err) {
       setError(err.message);
       console.error("Error downloading file:", err);
@@ -111,65 +103,13 @@ const SubmissionsManagement = () => {
     }
   };
 
-  const handleBulkAction = async () => {
-    if (!bulkAction || selectedSubmissions.length === 0) return;
-
-    try {
-      for (const submissionId of selectedSubmissions) {
-        if (bulkAction === "approve") {
-          await adminService.updateSubmissionStatus(submissionId, "approved");
-        } else if (bulkAction === "reject") {
-          await adminService.updateSubmissionStatus(submissionId, "rejected");
-        }
-      }
-
-      setSelectedSubmissions([]);
-      setBulkAction("");
-      fetchSubmissions();
-    } catch (err) {
-      setError(err.message);
-      console.error("Error performing bulk action:", err);
-    }
-  };
-
-  const toggleSubmissionSelection = (submissionId) => {
-    setSelectedSubmissions((prev) =>
-      prev.includes(submissionId)
-        ? prev.filter((id) => id !== submissionId)
-        : [...prev, submissionId]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    setSelectedSubmissions((prev) =>
-      prev.length === submissions.length
-        ? []
-        : submissions.map((submission) => submission.id)
-    );
-  };
+  // Removed unused bulk action and selection handlers
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getStatusBadge = (status) => {
-    const statusColors = {
-      pending: "bg-yellow-500",
-      approved: "bg-green-500",
-      rejected: "bg-red-500",
-      "in-review": "bg-blue-500",
-      "needs-revision": "bg-orange-500",
-    };
-    return (
-      <span
-        className={`px-2 py-1 text-xs rounded-full text-white ${
-          statusColors[status] || statusColors.pending
-        }`}
-      >
-        {status.replace("-", " ")}
-      </span>
-    );
-  };
+  // Removed unused getStatusBadge
 
   if (loading) {
     return (
@@ -193,7 +133,7 @@ const SubmissionsManagement = () => {
           <p className="text-gray-400">Review and manage task submissions</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+          <button className="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
             Export Data
           </button>
         </div>
@@ -201,16 +141,16 @@ const SubmissionsManagement = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="p-4 bg-red-900/20 border border-red-500 rounded-lg">
+        <div className="p-4 border border-red-500 rounded-lg bg-red-900/20">
           <p className="text-red-300">{error}</p>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block mb-2 text-sm font-medium text-gray-300">
               Search
             </label>
             <input
@@ -218,17 +158,17 @@ const SubmissionsManagement = () => {
               placeholder="Search submissions..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block mb-2 text-sm font-medium text-gray-300">
               Status
             </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -239,25 +179,25 @@ const SubmissionsManagement = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block mb-2 text-sm font-medium text-gray-300">
               Task
             </label>
             <select
               value={taskFilter}
               onChange={(e) => setTaskFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="all">All Tasks</option>
               {/* Task options would be populated from API */}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block mb-2 text-sm font-medium text-gray-300">
               Actions
             </label>
             <button
               onClick={fetchSubmissions}
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="w-full px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
             >
               Apply Filters
             </button>
@@ -265,168 +205,112 @@ const SubmissionsManagement = () => {
         </div>
       </div>
 
-      {/* Bulk Actions */}
-      {selectedSubmissions.length > 0 && (
-        <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-gray-300">
-              {selectedSubmissions.length} submission
-              {selectedSubmissions.length !== 1 ? "s" : ""} selected
-            </p>
-            <div className="flex items-center space-x-3">
-              <select
-                value={bulkAction}
-                onChange={(e) => setBulkAction(e.target.value)}
-                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Select Action</option>
-                <option value="approve">Approve</option>
-                <option value="reject">Reject</option>
-              </select>
-              <button
-                onClick={handleBulkAction}
-                disabled={!bulkAction}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bulk Actions removed (no longer needed) */}
 
-      {/* Submissions Table */}
-      <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+      {/* Submissions Table (Completed Tasks with User and File Info) */}
+      <div className="overflow-hidden bg-gray-800 border border-gray-700 rounded-xl">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedSubmissions.length === submissions.length &&
-                      submissions.length > 0
-                    }
-                    onChange={toggleSelectAll}
-                    className="rounded"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                  Task
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                  Status
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
+                  Task
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
                   Files
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-300 uppercase">
                   Submitted
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                  Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {submissions.map((submission) => (
-                <motion.tr
-                  key={submission.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="hover:bg-gray-700/50"
-                >
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedSubmissions.includes(submission.id)}
-                      onChange={() => toggleSubmissionSelection(submission.id)}
-                      className="rounded"
-                    />
+              {submissions.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-6 py-8 text-center text-gray-400"
+                  >
+                    No completed submissions found.
                   </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="text-white font-medium">
-                        {submission.taskTitle}
-                      </p>
-                      <p className="text-gray-400 text-sm">
-                        ID: {submission.taskId}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-sm font-medium text-white">
-                          {submission.userName?.[0] || "U"}
-                        </span>
+                </tr>
+              ) : (
+                submissions.map((submission, idx) => (
+                  <tr
+                    key={submission._id || idx}
+                    className="hover:bg-gray-700/50"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="flex items-center justify-center w-8 h-8 mr-3 bg-indigo-600 rounded-full">
+                          <span className="text-sm font-medium text-white">
+                            {submission.user?.name?.[0] || "U"}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">
+                            {submission.user?.name || "Unknown User"}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {submission.user?.email || "-"}
+                          </p>
+                        </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
                       <div>
-                        <p className="text-white font-medium">
-                          {submission.userName}
+                        <p className="font-medium text-white">
+                          {submission.task?.title || "Untitled Task"}
                         </p>
-                        <p className="text-gray-400 text-sm">
-                          {submission.userEmail}
+                        <p className="text-sm text-gray-400">
+                          ID: {submission.task?._id || "-"}
                         </p>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {getStatusBadge(submission.status)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-1">
-                      {submission.files?.map((file, index) => (
-                        <button
-                          key={index}
-                          onClick={() =>
-                            handleDownloadFile(submission.id, file.name)
-                          }
-                          className="block text-sm text-indigo-400 hover:text-indigo-300"
-                        >
-                          📁 {file.name}
-                        </button>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-300">
-                    {formatDate(submission.submittedAt)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => {
-                          setSubmissionToReview(submission);
-                          setShowFeedbackModal(true);
-                        }}
-                        className="px-3 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700"
-                      >
-                        Review
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleUpdateStatus(submission.id, "approved")
-                        }
-                        className="px-3 py-1 text-xs bg-green-600 text-white rounded-full hover:bg-green-700"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleUpdateStatus(submission.id, "rejected")
-                        }
-                        className="px-3 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        {Array.isArray(submission.files) &&
+                        submission.files.length > 0 ? (
+                          submission.files.map((file, index) => (
+                            <button
+                              key={file._id || file.filename || index}
+                              onClick={() => handleDownloadFile(file)}
+                              className="block text-sm text-left text-indigo-400 hover:text-indigo-300"
+                              title={file.originalName || file.filename}
+                            >
+                              📁 {file.originalName || file.filename}
+                              {file.size && (
+                                <span className="ml-2 text-xs text-gray-400">
+                                  ({(file.size / 1024).toFixed(1)} KB)
+                                </span>
+                              )}
+                              {file.uploadedAt && (
+                                <span className="ml-2 text-xs text-gray-500">
+                                  {formatDate(file.uploadedAt)}
+                                </span>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-400">
+                            No files
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-gray-300">
+                      {formatDate(
+                        submission.submittedAt ||
+                          submission.completedAt ||
+                          submission.createdAt
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -443,7 +327,7 @@ const SubmissionsManagement = () => {
           <button
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed"
+            className="px-3 py-2 text-white bg-gray-700 rounded-lg hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed"
           >
             Previous
           </button>
@@ -455,7 +339,7 @@ const SubmissionsManagement = () => {
               setCurrentPage((prev) => Math.min(totalPages, prev + 1))
             }
             disabled={currentPage === totalPages}
-            className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed"
+            className="px-3 py-2 text-white bg-gray-700 rounded-lg hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed"
           >
             Next
           </button>
@@ -495,27 +379,27 @@ const FeedbackModal = ({ submission, onClose, onSubmit }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-gray-800 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-2xl font-bold text-white mb-6">
+        <h3 className="mb-6 text-2xl font-bold text-white">
           Review Submission
         </h3>
 
         <div className="mb-6">
-          <div className="bg-gray-700 rounded-lg p-4">
-            <h4 className="text-lg font-semibold text-white mb-2">
+          <div className="p-4 bg-gray-700 rounded-lg">
+            <h4 className="mb-2 text-lg font-semibold text-white">
               Task: {submission.taskTitle}
             </h4>
-            <p className="text-gray-300 mb-2">
+            <p className="mb-2 text-gray-300">
               Submitted by: {submission.userName}
             </p>
-            <p className="text-gray-300 mb-4">
+            <p className="mb-4 text-gray-300">
               Submitted on: {formatDate(submission.submittedAt)}
             </p>
 
             {submission.files && submission.files.length > 0 && (
               <div>
-                <h5 className="text-white font-medium mb-2">Files:</h5>
+                <h5 className="mb-2 font-medium text-white">Files:</h5>
                 <div className="space-y-1">
                   {submission.files.map((file, index) => (
                     <button
@@ -533,13 +417,13 @@ const FeedbackModal = ({ submission, onClose, onSubmit }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block mb-2 text-sm font-medium text-gray-300">
               Status
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="pending">Pending</option>
               <option value="in-review">In Review</option>
@@ -550,7 +434,7 @@ const FeedbackModal = ({ submission, onClose, onSubmit }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block mb-2 text-sm font-medium text-gray-300">
               Feedback
             </label>
             <textarea
@@ -558,22 +442,22 @@ const FeedbackModal = ({ submission, onClose, onSubmit }) => {
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="Provide feedback for the submission..."
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
-          <div className="flex justify-end space-x-4 pt-4">
+          <div className="flex justify-end pt-4 space-x-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              className="px-4 py-2 text-white bg-gray-600 rounded-lg hover:bg-gray-700"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
             >
               {loading ? "Saving..." : "Save Review"}
             </button>

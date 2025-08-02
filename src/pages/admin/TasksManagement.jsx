@@ -681,7 +681,9 @@ const CreateTaskModal = ({ onClose, onSuccess }) => {
     return date.toISOString().split("T")[0];
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = (e) => {
+    // Prevent form submission on Enter key or button click
+    if (e) e.preventDefault();
     // Validate current step before proceeding
     if (validateForm()) {
       setStep((prev) => Math.min(prev + 1, totalSteps));

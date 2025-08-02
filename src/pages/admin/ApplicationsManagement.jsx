@@ -178,14 +178,28 @@ const ApplicationsManagement = () => {
     }
   };
 
-  const downloadSubmissionFile = async (applicationId, fileId) => {
+  // Enhanced download handler: supports both TaskApplication and CompletedTask endpoints
+  const downloadSubmissionFile = async (applicationId, file) => {
     try {
-      // API endpoint: GET /api/admin/applications/:id/download/:fileId
-      // This would typically open in a new tab or trigger a download
-      window.open(
-        `/api/admin/applications/${applicationId}/download/${fileId}`,
-        "_blank"
-      );
+      let url = "";
+      if (file.completedTaskId) {
+        url = `/api/completed-tasks/${file.completedTaskId}/download`;
+      } else {
+        url = `/api/admin/applications/${applicationId}/download/${
+          file._id || file.id
+        }`;
+      }
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("File not found or server error");
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = file.originalName || file.filename || "download";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
       setError(`Error downloading file: ${err.message}`);
     }
@@ -461,7 +475,17 @@ const ApplicationsManagement = () => {
                     {getStatusBadge(app.status || "pending")}
                   </td>
                   <td className="p-4 text-gray-400">
-                    {formatDate(app.createdAt || app.submittedAt)}
+                    {app.submissions && app.submissions.length > 0
+                      ? `${app.submissions.length} file${
+                          app.submissions.length > 1 ? "s" : ""
+                        } (${formatDate(
+                          app.submissions[0]?.uploadedAt ||
+                            app.submittedAt ||
+                            app.createdAt
+                        )})`
+                      : app.status === "submitted"
+                      ? "Submitted (no files)"
+                      : "No submissions"}
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
@@ -635,10 +659,19 @@ const ApplicationsManagement = () => {
                     <div>
                       <h3 className="text-sm text-gray-400">Submitted On</h3>
                       <p className="text-lg font-medium text-white">
-                        {formatDate(
-                          selectedApplication.createdAt ||
-                            selectedApplication.submittedAt
-                        )}
+                        {selectedApplication.submissions &&
+                        selectedApplication.submissions.length > 0
+                          ? formatDate(
+                              selectedApplication.submissions[0]?.uploadedAt ||
+                                selectedApplication.submittedAt ||
+                                selectedApplication.createdAt
+                            )
+                          : selectedApplication.status === "submitted"
+                          ? formatDate(
+                              selectedApplication.submittedAt ||
+                                selectedApplication.createdAt
+                            )
+                          : formatDate(selectedApplication.createdAt)}
                       </p>
                     </div>
                     <div>
@@ -647,34 +680,52 @@ const ApplicationsManagement = () => {
                         {formatDate(selectedApplication.updatedAt)}
                       </p>
                     </div>
-                    {selectedApplication.files &&
-                      selectedApplication.files.length > 0 && (
-                        <div>
-                          <h3 className="text-sm text-gray-400">Attachments</h3>
-                          <div className="mt-2 space-y-2">
-                            {selectedApplication.files.map((file, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center gap-2"
+                    <div>
+                      <h3 className="text-sm text-gray-400">Attachments</h3>
+                      {selectedApplication.submissions &&
+                      selectedApplication.submissions.length > 0 ? (
+                        <div className="mt-2 space-y-2">
+                          {selectedApplication.submissions.map((file, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  downloadSubmissionFile(
+                                    selectedApplication._id ||
+                                      selectedApplication.id,
+                                    file
+                                  )
+                                }
+                                className="flex items-center gap-2 p-2 text-indigo-400 transition-colors rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20"
                               >
-                                <button
-                                  onClick={() =>
-                                    downloadSubmissionFile(
-                                      selectedApplication._id ||
-                                        selectedApplication.id,
-                                      file.id || idx
-                                    )
-                                  }
-                                  className="flex items-center gap-2 p-2 text-indigo-400 transition-colors rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20"
-                                >
-                                  <Download className="w-4 h-4" />
-                                  <span>{file.name || `File ${idx + 1}`}</span>
-                                </button>
-                              </div>
-                            ))}
-                          </div>
+                                <Download className="w-4 h-4" />
+                                <span>
+                                  {file.originalName ||
+                                    file.filename ||
+                                    `File ${idx + 1}`}
+                                </span>
+                              </button>
+                              {/* Basic file info UI */}
+                              {file.size && (
+                                <span className="ml-2 text-xs text-gray-400">
+                                  {(file.size / 1024).toFixed(1)} KB
+                                </span>
+                              )}
+                              {file.uploadedAt && (
+                                <span className="ml-2 text-xs text-gray-500">
+                                  {formatDate(file.uploadedAt)}
+                                </span>
+                              )}
+                            </div>
+                          ))}
                         </div>
+                      ) : (
+                        <p className="text-gray-400">
+                          {selectedApplication.status === "submitted"
+                            ? "No files found"
+                            : "No files uploaded"}
+                        </p>
                       )}
+                    </div>
                   </div>
                 </div>
 
@@ -693,7 +744,20 @@ const ApplicationsManagement = () => {
                   <div>
                     <h3 className="mb-2 text-sm text-gray-400">Feedback</h3>
                     <div className="p-4 text-gray-300 border rounded-lg bg-white/5 border-white/10">
-                      {selectedApplication.feedback}
+                      {typeof selectedApplication.feedback === "object"
+                        ? selectedApplication.feedback.comment ||
+                          "No feedback provided"
+                        : selectedApplication.feedback}
+                      {selectedApplication.feedback &&
+                        typeof selectedApplication.feedback === "object" &&
+                        selectedApplication.feedback.providedAt && (
+                          <div className="mt-2 text-xs text-gray-400">
+                            Provided:{" "}
+                            {formatDate(
+                              selectedApplication.feedback.providedAt
+                            )}
+                          </div>
+                        )}
                     </div>
                   </div>
                 )}
